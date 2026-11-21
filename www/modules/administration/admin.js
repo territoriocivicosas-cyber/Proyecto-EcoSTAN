@@ -1218,7 +1218,7 @@ async function crearUsuarioPanel(e) {
         const orgCreada = await territorios.vincularUsuario(filaU.id);
         document.getElementById('formUsuarioPanel').reset();
         await cargarUsuariosPanel();
-        alert("Usuario registrado" + (orgCreada ? " y vinculado a " + orgCreada.nombre + " con sus módulos por defecto" : "") + ". Si tu proyecto exige confirmación por correo, deberá confirmarlo antes de ingresar.");
+        alert("Usuario registrado" + (orgCreada ? " y vinculado a " + orgCreada.nombre + " con sus módulos por defecto" : "") + ".\n\nIngresa por: https://territoriocivico.com/acceso\nSi la cuenta es nueva, primero debe confirmar el correo que le llega.");
         territorios.cargar(); territorios.montarFormUsuario();
     } catch (err) { alert("Error al registrar el usuario: " + err.message); }
 }

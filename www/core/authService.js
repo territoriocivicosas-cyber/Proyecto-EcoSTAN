@@ -17,7 +17,7 @@ const aRuta = ruta => new URL(ruta, import.meta.url).href;
    Debe ser https (la app Android no puede recibir enlaces file:// ni capacitor://) y estar agregada en
    Supabase → Authentication → URL Configuration → Redirect URLs.
    Sube www/auth-callback.html a tu web y pon aquí su dirección. */
-export const URL_WEB_AUTH = 'https://ecostansantander.netlify.app/auth-callback.html';
+export const URL_WEB_AUTH = 'https://ecostan.territoriocivico.com/auth-callback.html';
 const urlAuthLista = () => !/CAMBIA-ESTE-DOMINIO/.test(URL_WEB_AUTH);
 
 export const RUTAS = {
@@ -195,31 +195,40 @@ export async function iniciarSesionAdministrativo(emailCrudo, password) {
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (authError || !authData || !authData.user) return { error: "Acceso denegado: Credenciales incorrectas." };
 
-    // 2. Perfil y permisos (tabla profiles)
-    const perfil = await validarPermisosAdministrativos(authData.user.id);
-    if (!perfil) {
-        await supabaseClient.auth.signOut();
-        return { error: "Tu usuario no está autorizado como administrador." };
-    }
+    return completarAccesoAdministrativo(authData.user);
+}
 
-    // 3. Control del superadministrador: cuenta activa y dependencia asignada (tabla usuarios_panel)
-    let rol = perfil.rol || '';
-    let dependencia = perfil.dependencia || '';
+/* Pasos 2 a 4 del acceso administrativo, con una sesión ya iniciada.
+   Lo usan el login de este proyecto y sso.html (acceso único desde territoriocivico.com/acceso). */
+export async function completarAccesoAdministrativo(usuario) {
+    if (!supabaseClient || !usuario) return { error: "No hay una sesión válida." };
+    const email = String(usuario.email || '').trim().toLowerCase();
+
+    // 2. Permisos: la tabla usuarios_panel manda (es la que administra el superadmin).
+    //    profiles es opcional: las cuentas que ya existían (correo personal o de la empresa)
+    //    se agregan al panel sin perfil.
+    const perfil = await validarPermisosAdministrativos(usuario.id);
     const { data: panel } = await supabaseClient
         .from('usuarios_panel')
         .select('activo, dependencia')
         .eq('email', email)
         .maybeSingle();
 
-    if (panel) {
-        if (panel.activo === false) {
-            await supabaseClient.auth.signOut();
-            return { error: "Tu cuenta está desactivada. Contacta al administrador del sistema." };
-        }
-        if (panel.dependencia) {
-            dependencia = panel.dependencia;
-            if (dependencia === 'superadmin') rol = 'superadmin';
-        }
+    if (panel && panel.activo === false) {
+        await supabaseClient.auth.signOut();
+        return { error: "Tu cuenta está desactivada. Contacta al administrador del sistema." };
+    }
+    if (!perfil && !panel) {
+        await supabaseClient.auth.signOut();
+        return { error: "Tu usuario no está autorizado como administrador." };
+    }
+
+    // 3. Rol y dependencia: primero lo asignado en el panel, si no, lo del perfil
+    let rol = (perfil && perfil.rol) || 'admin';
+    let dependencia = (perfil && perfil.dependencia) || '';
+    if (panel && panel.dependencia) {
+        dependencia = panel.dependencia;
+        if (dependencia === 'superadmin') rol = 'superadmin';
     }
 
     // 4. Datos que lee el panel
