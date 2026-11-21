@@ -20,10 +20,15 @@ const aRuta = ruta => new URL(ruta, import.meta.url).href;
 export const URL_WEB_AUTH = 'https://ecostan.territoriocivico.com/auth-callback.html';
 const urlAuthLista = () => !/CAMBIA-ESTE-DOMINIO/.test(URL_WEB_AUTH);
 
+/* En la web (ecostan.territoriocivico.com) el acceso del personal es el login único de
+   territoriocivico.com/acceso. En la app Android o de escritorio se usa admin-login.html. */
+export const ACCESO_UNICO = 'https://territoriocivico.com/acceso';
+export const enWebTerritorio = /(^|\.)territoriocivico\.com$/.test(window.location.hostname);
+
 export const RUTAS = {
     inicio:     aRuta('../home.html'),
     login:      aRuta('../modules/auth/login.html'),
-    loginAdmin: aRuta('../admin-login.html'),
+    loginAdmin: enWebTerritorio ? ACCESO_UNICO : aRuta('../admin-login.html'),
     admin:      aRuta('../modules/administration/admin.html')
 };
 

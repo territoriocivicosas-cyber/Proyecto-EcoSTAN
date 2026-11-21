@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script>
+        // En la web, el personal entra por el login único de Territorio Cívico
+        if (/(^|\.)territoriocivico\.com$/.test(location.hostname)) location.replace('https://territoriocivico.com/acceso');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso Administrativo - EcoSTAN</title>
