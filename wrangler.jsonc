@@ -1,7 +1,7 @@
 // Configuración para publicar la web de EcoSTAN en Cloudflare.
 // Solo se publica la carpeta "www" (app web y panel administrativo).
 {
-  "name": "ecostan-web",
+  "name": "proyecto-ecostan",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./www",
