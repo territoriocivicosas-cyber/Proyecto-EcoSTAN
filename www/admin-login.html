@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Administrativo - EcoSTAN</title>
+    <style>
+        :root {
+            --verde-gobierno: #1b4332;
+            --verde-suave: #2d6a4f;
+            --fondo-gris: #f4f6f8;
+        }
+
+        body {
+            background: var(--fondo-gris);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+            position: relative;
+        }
+
+        .auth-card {
+            background: #fff;
+            padding: 35px 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+            text-align: center;
+            margin: auto;
+        }
+
+        h2 {
+            color: var(--verde-gobierno);
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #222;
+            font-size: 13px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .btn-primary-custom {
+            width: 100%;
+            padding: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            border: none;
+            background: var(--verde-gobierno);
+            color: #fff;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        .btn-primary-custom:hover {
+            background: var(--verde-suave);
+        }
+    </style>
+</head>
+<body style="position: relative; min-height: 100vh; margin: 0;">
+
+    <div class="auth-card">
+        <h2>Panel de Gestión - EcoSTAN</h2>
+        <p class="subtitle">Acceso exclusivo para Alcaldía y Empresas Operadoras</p>
+        
+        <form onsubmit="ejecutarLoginAdmin(event)">
+            <div class="form-group">
+                <label>Correo electrónico (institucional o personal)</label>
+                <input type="email" id="adminEmail" class="form-control" placeholder="correo@dominio.com" required>
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="adminPassword" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" id="btnAdminLogin" class="btn-primary-custom">Ingresar al Panel</button>
+        </form>
+        <p style="text-align:center;margin-top:18px;"><a href="home.html" style="color:#1b4332;font-size:14px;text-decoration:none;">← Volver al inicio</a></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+        import { iniciarSesionAdminSupabase } from './modules/auth/auth.js';
+
+        window.ejecutarLoginAdmin = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const btn = document.getElementById('btnAdminLogin');
+
+            btn.disabled = true;
+            try {
+                await iniciarSesionAdminSupabase(email, password);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+    <footer style="width: 100%; flex-shrink: 0; text-align: center; font-size: 11px; color: #888; padding: 10px; line-height: 1.4; background: transparent;">
+        © 2026 EcoStan - Territorio Cívico S.A.S. Todos los derechos reservados.
+    </footer>
+</body>
+</html>

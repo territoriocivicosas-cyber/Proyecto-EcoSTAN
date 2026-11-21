@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#03140a">
+<title>ECOS SANTANDER</title>
+<style>
+  :root {
+    --fondo: #03140a;
+    --lima: #8fd43a;
+    --crema: #f4f1e4;
+    --crema-suave: rgba(244, 241, 228, .78);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { 
+    height: 100%; 
+    width: 100%;
+    background: var(--fondo); 
+    overflow: hidden; 
+  }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--crema);
+  }
+
+  /* Oculta los controles y el botón de play nativos del WebView (el círculo gris con triángulo) */
+  video::-webkit-media-controls,
+  video::-webkit-media-controls-panel,
+  video::-webkit-media-controls-start-playback-button,
+  video::-webkit-media-controls-overlay-play-button {
+    display: none !important;
+    -webkit-appearance: none;
+    opacity: 0;
+  }
+
+  /* Video de fondo optimizado para pantalla completa */
+  .video {
+    position: fixed; 
+    inset: 0;
+    width: 100%; 
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+  }
+  @media (min-aspect-ratio: 1/1) {
+    .video {
+      left: 50%; width: auto; max-width: 100%;
+      transform: translateX(-50%);
+      object-fit: contain;
+    }
+  }
+
+  /* Textos superpuestos */
+  .texto {
+    position: fixed; left: 0; right: 0;
+    bottom: calc(9vh + env(safe-area-inset-bottom, 0px));
+    padding: 0 24px;
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .texto h1 {
+    font-size: clamp(1.25rem, 4.6vw, 1.9rem);
+    font-weight: 600;
+    letter-spacing: .02em;
+    opacity: 0;
+  }
+  .reproduciendo .texto h1 { animation: aparecer .9s ease-out 0.5s forwards; }
+  .linea {
+    display: block; height: 3px; width: 0;
+    margin: 0 auto 18px;
+    background: var(--lima);
+    border-radius: 2px;
+  }
+  .reproduciendo .linea { animation: trazar .8s ease-out 0.3s forwards; }
+  .pilares {
+    display: flex; justify-content: center; align-items: stretch;
+    gap: 0; margin-top: 18px;
+    list-style: none;
+    font-size: clamp(.8rem, 3.2vw, 1rem);
+    color: var(--crema-suave);
+    opacity: 0;
+  }
+  .reproduciendo .pilares { animation: aparecer .9s ease-out 1s forwards; }
+  .pilares li { padding: 0 14px; }
+  .pilares li + li { border-left: 1px solid rgba(143, 212, 58, .55); }
+
+  .omitir {
+    position: fixed; right: 18px;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    background: rgba(3, 20, 10, .65);
+    color: var(--crema);
+    border: 1px solid rgba(244, 241, 228, .35);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font: inherit; font-size: .85rem;
+    cursor: pointer;
+    z-index: 20;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .omitir:hover { border-color: var(--lima); }
+  .omitir:focus-visible { outline: 2px solid var(--lima); outline-offset: 2px; }
+
+  @keyframes aparecer { to { opacity: 1; } }
+  @keyframes trazar { to { width: 72px; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reproduciendo .texto h1, .reproduciendo .pilares, .texto h1, .pilares { animation: none; opacity: 1; }
+    .reproduciendo .linea, .linea { animation: none; width: 72px; }
+  }
+</style>
+</head>
+<body>
+
+<video class="video" id="video" src="bienvenida.mp4" poster="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgFuECAAA/ACJ12JsMAAAAAElFTkSuQmCC" autoplay muted playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload nofullscreen noremoteplayback"></video>
+
+<div class="texto">
+  <span class="linea"></span>
+  <h1 id="titulo"></h1>
+  <ul class="pilares" id="pilares"></ul>
+</div>
+
+<button class="omitir" id="omitir" type="button">Omitir</button>
+
+<script>
+  // Configuración editable
+  const CONFIG = {
+    titulo: "Bienvenido a ECOS SANTANDER",
+    pilares: ["Medio Ambiente", "Tecnología", "Ciudad Inteligente"],
+    destino: "home.html",   // Página a la que pasa al terminar la intro
+    respaldoMs: 7000         // Tiempo máximo de respaldo en ms si el video tarda en cargar
+  };
+
+  document.getElementById("titulo").textContent = CONFIG.titulo;
+  const lista = document.getElementById("pilares");
+  CONFIG.pilares.forEach(function (p) {
+    const li = document.createElement("li");
+    li.textContent = p;
+    lista.appendChild(li);
+  });
+
+  let ido = false;
+  function continuar() {
+    if (ido) return;
+    ido = true;
+    window.location.href = CONFIG.destino;
+  }
+
+  const video = document.getElementById("video");
+  const btnOmitir = document.getElementById("omitir");
+
+  // Cuando el video empieza a reproducirse, arrancan las animaciones de texto
+  function marcarReproduciendo() { document.body.classList.add("reproduciendo"); }
+  video.addEventListener("playing", marcarReproduciendo);
+  setTimeout(marcarReproduciendo, 1500); // respaldo: si no se dispara "playing", los textos salen igual
+
+  // Evento al terminar el video
+  video.addEventListener("ended", function () { setTimeout(continuar, 200); });
+  video.addEventListener("error", function () { setTimeout(continuar, 500); });
+
+  // Eventos para el botón Omitir
+  btnOmitir.addEventListener("click", continuar);
+  btnOmitir.addEventListener("touchstart", function(e) {
+    e.preventDefault();
+    continuar();
+  }, { passive: false });
+
+  // Ajustar tiempo de respaldo según la duración real del video
+  video.addEventListener("loadedmetadata", function() {
+    if (video.duration && !isNaN(video.duration)) {
+      const duracionMs = (video.duration * 1000) + 500;
+      setTimeout(continuar, duracionMs);
+    }
+  });
+
+  // Forzar reproducción inmediata en dispositivos móviles
+  document.addEventListener("DOMContentLoaded", () => {
+    video.muted = true;
+    const promesa = video.play();
+    if (promesa !== undefined) {
+      promesa.catch(function () {
+        // Si hay alguna restricción de autoplay, el respaldo o la interacción lo manejarán
+      });
+    }
+  });
+
+  // Temporizador de seguridad
+  setTimeout(continuar, CONFIG.respaldoMs);
+</script>
+
+</body>
+</html>

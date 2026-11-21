@@ -1,0 +1,35 @@
+<!--
+  modules/map_routing/map.html
+  Mapa de "Situación de la ciudad" (inicio) y pantalla de rutas de recolección.
+  Fragmento HTML: core/views.js lo inserta en home.html al arrancar.
+  data-slot-destino indica en qué hueco (data-slot) de home.html va cada bloque.
+-->
+<div class="inicio-mapa" data-slot-destino="inicio-mapa">
+    <div class="section-title" style="margin-top: 30px;">
+        <div>
+            <h2>Situación de la ciudad</h2>
+            <p>Visualización interactiva con GPS</p>
+        </div>
+    </div>
+
+    <div class="map" id="mapa-container" style="height: 350px; width: 100%; border-radius: 12px; margin-bottom: 30px;"></div>
+</div>
+
+<!-- RUTAS -->
+<section id="rutas" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Rutas de recolección</h2>
+            <p>Consulta información sobre los recorridos.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+    </div>
+
+    <div class="route-search">
+        <input type="text" id="buscarRuta" placeholder="Buscar por barrio o sector...">
+    </div>
+
+    <div id="listaRutas" class="routes">
+        <p class="aviso-vacio">Cargando rutas...</p>
+    </div>
+</section>

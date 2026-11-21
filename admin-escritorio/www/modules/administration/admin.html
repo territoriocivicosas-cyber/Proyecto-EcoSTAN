@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - EcoSTAN / Ciudad Limpia</title>
+
+    <!-- Librería oficial de Supabase (debe cargarse antes que admin.js: core/supabaseClient.js la necesita) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Mapa de calor -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/osmtogeojson@3.0.0-beta.5/osmtogeojson.js"></script>
+
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="app-shell">
+
+    <!-- MENÚ LATERAL POR ÁREAS (se construye desde las opciones permitidas del selector) -->
+    <aside class="sidebar" id="sidebar" aria-label="Menú principal">
+        <div class="sb-brand">
+            <div class="sb-logo"><img src="../../logo.png" alt="" onerror="this.remove(); document.querySelector('.sb-logo').textContent='♻️';"></div>
+            <div><div class="sb-title">EcoSTAN</div><div class="sb-sub">Centro de mando</div></div>
+        </div>
+        <nav class="sb-nav" id="sbNav"></nav>
+        <div class="sb-foot">
+            <div class="sb-user">
+                <div class="sb-avatar" id="sbAvatar">?</div>
+                <div class="sb-user-txt"><strong id="sbUserEmail">Verificando sesión...</strong><small id="sbUserRol">—</small></div>
+            </div>
+            <button type="button" class="sb-logout" onclick="cerrarSesion()">⎋ Cerrar sesión</button>
+        </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="alternarSidebar(false)"></div>
+
+    <div class="app-body">
+    <header class="topbar">
+        <button type="button" class="btn-menu" onclick="alternarSidebar()" aria-label="Abrir menú">☰</button>
+        <div class="topbar-title"><div class="crumb" id="crumb">General</div><h1 id="tituloModulo">Resumen general</h1></div>
+        <span class="chip" id="chipRol">—</span>
+    </header>
+
+    <!-- Selector original: sigue siendo la fuente de verdad de la lógica y de los permisos (el menú lateral lo controla) -->
+    <div class="selector-oculto">
+        <select id="selectBandeja" onchange="cambiarBandeja()">
+                    <option value="inicio_resumen" id="optResumen">🏠 Resumen general</option>
+                    <option value="reportes_abandonados" id="optAbandonados">🗑️ Reportar problemas de la ciudad</option>
+                    <option value="reportes_violencia_animal" id="optViolenciaAnimal">🐾 Violencia Animal</option>
+                    <option value="reportes_ciudadania" id="optCiudadania">💡 Ciudadanía Activa</option>
+                    <option value="usuarios_registrados" id="optUsuarios">👥 Usuarios Registrados</option>
+                    <option value="usuarios_bloqueados" id="optBloqueados">🚫 Usuarios Bloqueados</option>
+                    <option value="gestion_banners" id="optBanners">📢 Gestión de Banners y Publicidad</option>
+                    <option value="gestion_rutas" id="optRutas">🚛 Rutas y Logística de Recolección</option>
+                    <option value="operacion_recicladores">🚚 Recicladores (CicloGo)</option>
+                    <option value="operacion_pesajes">⚖️ Báscula y pesajes (CicloGo)</option>
+                    <option value="operacion_ecas">🏢 Empresas ECA (CicloGo)</option>
+                    <option value="analitica_kpi" id="optKpi">📈 Analítica Ejecutiva e IA</option>
+                    <option value="plan_premium" id="optPremium">💎 Plan Premium</option>
+                    <option value="superadmin_panel" id="optSuperadmin">🛡️ Superadministrador</option>
+        </select>
+    </div>
+
+    <main>
+        <!-- RESUMEN GENERAL -->
+        <div id="panelInicio" style="display: none;">
+            <div class="welcome-card">
+                <h2 id="saludoInicio">Bienvenido</h2>
+                <p id="subSaludo">Resumen de la operación en tiempo real.</p>
+            </div>
+            <div class="kpi-grid" id="kpiInicio"><p style="color:#888;">Cargando indicadores...</p></div>
+            <div class="grid-2">
+                <div class="card-admin-banner">
+                    <h3>🕒 Últimos reportes recibidos</h3>
+                    <div style="overflow-x:auto;"><table>
+                        <thead><tr><th>Fecha</th><th>Categoría</th><th>Detalle</th><th>Municipio</th><th>Estado</th><th></th></tr></thead>
+                        <tbody id="cuerpoUltimosReportes"><tr><td colspan="6" style="text-align:center;">Cargando...</td></tr></tbody>
+                    </table></div>
+                </div>
+                <div class="card-admin-banner">
+                    <h3>⚡ Accesos rápidos</h3>
+                    <div class="quick-grid" id="accesosRapidos"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO DE GESTIÓN Y PUBLICACIÓN DE BANNERS -->
+        <div id="panelGestionBanners" class="card-admin-banner" style="display: none;">
+            <h3>📢 Publicar Nuevo Banner o Publicidad en Tiempo Real</h3>
+            <form id="formPublicarBanner">
+                <div class="form-banner-grid">
+                    <div class="form-banner-group">
+                        <label>Categoría del Anuncio:</label>
+                        <select id="bannerBadge" required>
+                            <option value="ALCALDÍA / INSTITUCIONAL">🏛️ Alcaldía / Institucional</option>
+                            <option value="ASEO Y RECICLAJE">♻️ Aseo y Reciclaje</option>
+                            <option value="BIENESTAR ANIMAL">🐾 Bienestar Animal (Esterilizaciones)</option>
+                            <option value="EVENTOS Y CULTURA">🎉 Eventos y Cultura</option>
+                            <option value="GESTIÓN DE RIESGO">⚠️ Gestión de Riesgo / Emergencias</option>
+                            <option value="PUBLICIDAD COMERCIAL">💼 Publicidad Comercial (Privados)</option>
+                        </select>
+                    </div>
+                    <div class="form-banner-group">
+                        <label>Dirigido a Municipio:</label>
+                        <select id="bannerMunicipio" required>
+                            <option value="Todos">🌐 Nivel General (Todos los municipios)</option>
+                            <option value="Bucaramanga">Bucaramanga</option>
+                            <option value="Floridablanca">Floridablanca</option>
+                            <option value="Girón">Girón</option>
+                            <option value="Piedecuesta">Piedecuesta</option>
+                        </select>
+                    </div>
+                    <div class="form-banner-group">
+                        <label>Título del Banner:</label>
+                        <input type="text" id="bannerTitulo" placeholder="Ej: Jornada de Esterilización" required>
+                    </div>
+                </div>
+                <div class="form-banner-grid" style="margin-top: 15px;">
+                    <div class="form-banner-group">
+                        <label>Imagen publicitaria (Se comprimirá automáticamente):</label>
+                        <input type="file" id="bannerImagenFile" accept="image/*" required>
+                    </div>
+                    <div class="form-banner-group">
+                        <label>Descripción corta:</label>
+                        <textarea id="bannerDescripcion" placeholder="Escribe el resumen del comunicado..."></textarea>
+                    </div>
+                </div>
+                <div class="form-banner-grid" style="margin-top: 15px;">
+                    <div class="form-banner-group">
+                        <label>Al pulsar "Ver detalles" abrir:</label>
+                        <select id="bannerTipoEnlace" onchange="alternarTipoEnlaceBanner()">
+                            <option value="aviso">📝 Nota corta / Aviso interno (dentro de la app)</option>
+                            <option value="url">🌐 URL externa web (Alcaldía, Gobernación, empresa de aseo)</option>
+                        </select>
+                    </div>
+                    <div class="form-banner-group" id="grupoBannerUrl" style="display: none;">
+                        <label>URL externa (https://...):</label>
+                        <input type="url" id="bannerUrlExterna" placeholder="https://www.bucaramanga.gov.co/...">
+                    </div>
+                    <div class="form-banner-group" id="grupoBannerNota">
+                        <label>Nota corta / Aviso (se mostrará en la sección Avisos):</label>
+                        <textarea id="bannerNotaAviso" placeholder="Redacta el aviso completo para el ciudadano..."></textarea>
+                    </div>
+                </div>
+                <div class="form-banner-grid" style="margin-top: 15px;">
+                    <input type="hidden" id="bannerOrigen" value="alcaldia">
+                    <div class="form-banner-group">
+                        <label><input type="checkbox" id="bannerImportante"> ⭐ Es importante (también se envía a la campana de novedades de los ciudadanos)</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-publicar-banner" style="margin-top: 15px;">🚀 Publicar Banner</button>
+            </form>
+
+            <!-- SECCIÓN DE MÉTRICAS Y ELIMINACIÓN DE BANNERS -->
+            <div style="margin-top: 35px; border-top: 2px solid var(--borde-color); padding-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="color: var(--verde-gobierno); margin: 0;">📊 Métricas de Visualización y Gestión de Anuncios</h3>
+                    <button type="button" class="btn-accion-tabla" onclick="cargarMetricasBanners()" style="font-size: 12px; padding: 6px 12px;">🔄 Actualizar Datos</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Título del Banner</th>
+                                <th>Categoría / Origen</th>
+                                <th>Municipio</th>
+                                <th>Estado</th>
+                                <th>Vistas</th>
+                                <th>Usuarios únicos</th>
+                                <th>Clics</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaMetricasBanners">
+                            <tr><td colspan="8" style="text-align:center;">Cargando métricas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DEL SUPERADMINISTRADOR -->
+        <div id="panelSuperadmin" style="display: none;">
+            <div class="card-admin-banner" data-sec="usuarios">
+                <h3>👥 Gestión de Usuarios y Credenciales</h3>
+                <form id="formUsuarioPanel" onsubmit="crearUsuarioPanel(event)">
+                    <div class="form-banner-grid">
+                        <div class="form-banner-group"><label>Nombre / Entidad:</label><input type="text" id="usrNombre" required></div>
+                        <div class="form-banner-group"><label>Correo de acceso:</label><input type="email" id="usrEmail" required></div>
+                        <div class="form-banner-group"><label>Clave temporal (mín. 6):</label><input type="password" id="usrClave" minlength="6" autocomplete="new-password"></div>
+                        <div class="form-banner-group"><label>Dependencia:</label>
+                            <select id="usrDependencia">
+                                <option value="alcaldia">Alcaldía</option><option value="aseo">Empresa de Aseo</option>
+                                <option value="recicladores">Recicladores</option><option value="publicidad">Banners / Publicidad</option>
+                                <option value="superadmin">Superadministrador</option>
+                            </select></div>
+                    </div>
+                    <div id="usrOrgBloque"></div>
+                    <label style="font-size:12px; display:block; margin-bottom:12px;"><input type="checkbox" id="usrYaExiste"> La cuenta ya existe en Supabase (solo vincularla, sin crear clave)</label>
+                    <button type="submit" class="btn-publicar-banner">➕ Registrar usuario</button>
+                </form>
+                <div style="overflow-x:auto; margin-top:20px;">
+                    <table>
+                        <thead><tr><th>Nombre</th><th>Correo</th><th>Dependencia</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody id="cuerpoUsuariosPanel"><tr><td colspan="5" style="text-align:center;">Cargando...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-admin-banner" data-sec="territorios">
+                <h3>🗺️ Territorios · municipios cercanos a Bucaramanga</h3>
+                <p style="font-size:13px;color:#555;margin:0 0 10px;">Catálogo de municipios que se pueden instalar. Habilita los que ya tienen contrato.</p>
+                <div id="terrMunicipios">Cargando…</div>
+            </div>
+            <div class="card-admin-banner" data-sec="organizaciones">
+                <h3>🏢 Organizaciones (alcaldías, empresas de aseo, ECA, recicladores, CDMB)</h3>
+                <div id="terrOrganizaciones">Cargando…</div>
+            </div>
+            <div class="card-admin-banner" data-sec="accesos">
+                <h3>🔑 Accesos y módulos por usuario</h3>
+                <div id="terrAccesos">Cargando…</div>
+            </div>
+            <div class="card-admin-banner" data-sec="dependencias">
+                <h3>🧭 Configuración y Enrutamiento por Dependencia</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:12px;">Define qué bandejas ve cada dependencia y qué tipos de reporte le llegan. Campos de tipos vacíos = todos.</p>
+                <div id="configDependencias">Cargando...</div>
+            </div>
+            <div class="card-admin-banner" data-sec="alertas">
+                <h3>🔔 Alertas y Notificaciones</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:12px;">Las alertas se envían de forma automática cuando la Alcaldía, la Empresa de Aseo o los Recicladores hacen cambios. Aquí solo puedes habilitarlas o deshabilitarlas; el cambio se guarda al instante.</p>
+                <div id="configAlertas">Cargando...</div>
+                <h4 style="margin:18px 0 8px; color:var(--verde-gobierno);">Últimas notificaciones enviadas a la app</h4>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Título</th><th>Destino</th></tr></thead>
+                    <tbody id="cuerpoHistorialNotif"><tr><td colspan="4" style="text-align:center;">Cargando...</td></tr></tbody>
+                </table></div>
+            </div>
+            <div class="card-admin-banner" data-sec="errores">
+                <h3>🛠️ Errores reportados por la app</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:10px;">Cada error que ocurre en el celular de un ciudadano se registra aquí con la versión de la app, la pantalla y el usuario.</p>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>Fecha</th><th>Versión</th><th>Usuario</th><th>Pantalla</th><th>Mensaje</th></tr></thead>
+                    <tbody id="cuerpoErroresApp"><tr><td colspan="5" style="text-align:center;">Cargando...</td></tr></tbody>
+                </table></div>
+            </div>
+            <div class="card-admin-banner" data-sec="mantenimiento" style="border-left-color:#c62828;">
+                <h3>🧹 Mantenimiento</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:10px;">Libera espacio de la base de datos (plan gratis de Supabase: 500 MB). Solo borra información de registro y temporal; no toca usuarios, EcoPuntos, reportes ni pesajes.</p>
+                <div id="mantUso" style="margin-bottom:14px;">Cargando...</div>
+                <h4 style="margin:6px 0 8px; color:var(--verde-gobierno);">Tablas más pesadas</h4>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>Tabla</th><th>Filas (aprox.)</th><th>Tamaño</th></tr></thead>
+                    <tbody id="cuerpoMantTablas"><tr><td colspan="3" style="text-align:center;">Cargando...</td></tr></tbody>
+                </table></div>
+                <h4 style="margin:18px 0 8px; color:var(--verde-gobierno);">Limpieza segura</h4>
+                <div class="form-banner-group" style="max-width:320px; margin-bottom:10px;">
+                    <label>Para habilitar los botones escribe <strong>BORRAR</strong>:</label>
+                    <input type="text" id="mantConfirmar" autocomplete="off" oninput="mantRevisarConfirmacion()">
+                </div>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>Qué se limpia</th><th>Criterio</th><th>Filas a borrar</th><th></th></tr></thead>
+                    <tbody id="cuerpoMantTareas"><tr><td colspan="4" style="text-align:center;">Cargando...</td></tr></tbody>
+                </table></div>
+                <p id="mantMensaje" style="font-size:13px; margin-top:10px;"></p>
+                <h4 style="margin:18px 0 8px; color:var(--verde-gobierno);">Últimas limpiezas</h4>
+                <div style="overflow-x:auto;"><table>
+                    <thead><tr><th>Fecha</th><th>Usuario</th><th>Tarea</th><th>Filas</th></tr></thead>
+                    <tbody id="cuerpoMantHistorial"><tr><td colspan="4" style="text-align:center;">Sin limpiezas todavía</td></tr></tbody>
+                </table></div>
+            </div>
+        </div>
+
+        <!-- OPERACIÓN DE RECICLADORES (datos de CicloGo vía puente) -->
+        <div id="panelOperacion" style="display: none;"><div id="operacionContenido"></div></div>
+
+        <!-- MÓDULO DE RUTAS Y LOGÍSTICA -->
+        <div id="panelRutas" style="display: none;">
+            <!-- HOY -->
+            <div class="card-admin-banner">
+                <h3>🚛 Rutas de hoy <small id="rutasHoyFecha" style="font-weight:400; color:#666; font-size:13px;"></small></h3>
+                <p class="rt-ayuda">Cada ruta pasa sola de <b>Programada</b> a <b>En curso</b> a la hora indicada. Después, el operador (CicloGo) o tú cambian el estado y registran las novedades del camino.</p>
+                <div id="rutasHoy" class="rt-grid"></div>
+            </div>
+
+            <!-- ARMAR RUTA EN EL MAPA -->
+            <div class="card-admin-banner" id="cardMapaRutas">
+                <h3 id="rtTitulo">🗺️ Crear ruta desde el mapa</h3>
+                <div class="rt-pasos">
+                    <div class="rt-paso"><b>1</b> Elige municipio y toca los barrios en el mapa</div>
+                    <div class="rt-paso"><b>2</b> Pon nombre, días y hora</div>
+                    <div class="rt-paso"><b>3</b> Guarda: queda <span class="rt-chip rt-programada">🕒 Programada</span></div>
+                </div>
+                <div class="rt-layout">
+                    <div>
+                        <div class="rt-barra">
+                            <select id="mapaRutaMun" onchange="cargarBarriosMapa()"><option>Bucaramanga</option><option>Floridablanca</option><option>Girón</option><option>Piedecuesta</option></select>
+                            <button type="button" class="btn-chat-admin" onclick="descargarLimitesOSM()" title="Se hace una sola vez por municipio">⬇️ Cargar límites de barrios</button>
+                            <span id="planComunas" class="rt-comunas"></span>
+                        </div>
+                        <p id="mapaRutaInfo" class="rt-info"></p>
+                        <div id="mapaRutas"></div>
+                        <p class="rt-leyenda">Cada color es una comuna · <span class="rt-dot" style="background:#2563eb"></span> Seleccionado ahora · <span class="rt-dot" style="background:#fff; border:2px dashed #d97706; box-sizing:border-box;"></span> Ya está en otra ruta</p>
+                    </div>
+                    <div class="rt-form">
+                        <label>Nombre de la ruta</label>
+                        <input type="text" id="planNombre" placeholder="Ej: Ruta norte – lunes">
+                        <label>Días de paso</label>
+                        <div class="rt-dias" id="rutaDias">
+                            <label><input type="checkbox" value="Lunes"><span>Lun</span></label><label><input type="checkbox" value="Martes"><span>Mar</span></label><label><input type="checkbox" value="Miércoles"><span>Mié</span></label><label><input type="checkbox" value="Jueves"><span>Jue</span></label><label><input type="checkbox" value="Viernes"><span>Vie</span></label><label><input type="checkbox" value="Sábado"><span>Sáb</span></label><label><input type="checkbox" value="Domingo"><span>Dom</span></label>
+                        </div>
+                        <div class="rt-fila">
+                            <div><label>Hora de inicio</label><input type="time" id="planHora"></div>
+                            <div><label>Color</label><input type="color" id="planColor" value="#2563eb" onchange="refrescarEstiloBarrios()"></div>
+                        </div>
+                        <label>Servicio</label>
+                        <input type="text" id="planServicio" value="Recolección de residuos ordinarios">
+                        <label>Barrios de la ruta (ordénalos con ↑ ↓)</label>
+                        <input type="search" id="planBuscar" placeholder="🔎 Buscar barrio para agregar" oninput="filtrarBuscadorBarrios()">
+                        <div id="planSugerencias" class="rt-sug"></div>
+                        <ol id="planLista" class="rt-lista"></ol>
+                        <div id="planResumen" class="rt-resumen"></div>
+                        <div class="rt-botones">
+                            <button type="button" class="btn-chat-admin" onclick="calcularRecorrido(true)">⚡ Ordenar por el camino más corto</button>
+                            <button type="button" class="btn-publicar-banner" style="margin:0;" id="btnGuardarPlan" onclick="guardarPlanRuta()">💾 Guardar ruta</button>
+                            <button type="button" class="btn-reset-filters" style="margin:0;" onclick="limpiarPlanRuta()">Limpiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RUTAS PROGRAMADAS -->
+            <div class="card-admin-banner">
+                <h3>📋 Rutas programadas</h3>
+                <div id="planesGuardados" class="rt-grid"></div>
+            </div>
+
+            <!-- DETALLE POR BARRIO (lo que ve el ciudadano) -->
+            <details class="card-admin-banner">
+                <summary style="cursor:pointer; font-weight:700;">🏘️ Detalle por barrio (lo que ve el ciudadano en la app)</summary>
+                <div class="filters-card" style="margin-top:14px; box-shadow:none; padding:0;">
+                    <div class="filter-group"><label>Municipio</label>
+                        <select id="filtroRutaMunicipio" onchange="renderizarRutas()"><option value="todos">Todos</option><option>Bucaramanga</option><option>Floridablanca</option><option>Girón</option><option>Piedecuesta</option></select></div>
+                    <div class="filter-group"><label>Estado</label>
+                        <select id="filtroRutaEstado" onchange="renderizarRutas()"><option value="todos">Todos</option><option value="programada">Programada</option><option value="en_curso">En curso</option><option value="completada">Completada</option><option value="incumplida">Incumplida</option><option value="suspendida">Suspendida</option></select></div>
+                    <div class="filter-group"><label>Desde</label><input type="date" id="filtroRutaDesde" onchange="renderizarRutas()"></div>
+                    <div class="filter-group"><label>Hasta</label><input type="date" id="filtroRutaHasta" onchange="renderizarRutas()"></div>
+                </div>
+                <p id="rutasResumen" style="font-size:12px; color:#555; margin:12px 0;"></p>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead><tr><th>Barrio</th><th>Municipio</th><th>Día</th><th>Hora</th><th>Cumplimiento</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody id="cuerpoTablaRutas"><tr><td colspan="7" style="text-align:center;">Cargando rutas...</td></tr></tbody>
+                    </table>
+                </div>
+            </details>
+        </div>
+
+        <!-- MÓDULO DE ANALÍTICA EJECUTIVA E IA -->
+        <div id="panelAnalitica" style="display: none;">
+            <div id="panoramaContenido" class="an-panorama"></div>
+            <div class="card-admin-banner">
+                <h3>🔥 Mapa de Calor de Reportes (tiempo real)</h3>
+                <div id="mapaCalor" style="height: 420px; border-radius: 8px;"></div>
+                <p id="mapaCalorInfo" style="font-size:12px; color:#666; margin-top:8px;"></p>
+            </div>
+        </div>
+
+        <!-- PLAN PREMIUM: KPIs, Asistente IA y bitácora -->
+        <div id="panelPremium" style="display: none;">
+            <div id="notaPremiumAdmin" class="card-admin-banner" style="display:none; border-left-color:#f9a825;" >
+                <h3>💎 Módulo Premium (KPIs + Asistente IA)</h3>
+                <p style="font-size:13px; color:#555; line-height:1.5;">Se activa <strong>por dependencia</strong> (casilla "Módulo Premium" dentro de su tarjeta de configuración) o <strong>por usuario</strong> (botón "💎 Premium" en la tabla de usuarios). El superadmin siempre lo ve activo. Con cualquiera de las dos opciones encendida, la cuenta lo recibe.</p>
+            </div>
+            <div id="avisoPremium" class="card-admin-banner" style="display: none; border-left-color: #f9a825;">
+                <h3>🔒 Módulo Premium</h3>
+                <p style="font-size:13px; line-height:1.5;">Los KPIs de rendimiento operativo (ICLR, Tasa de Resolución, TPR) y el Asistente de IA de Optimización de Flotas están disponibles bajo un plan superior de contratación. Contacta al administrador del sistema para activarlos.</p>
+            </div>
+            <div id="bloquePremium" style="display: none;">
+                <div id="premiumTabs" class="an-tabs"></div>
+                <div id="premiumContenido" class="an-premium"></div>
+                <div id="bitacoraWrap" style="display:none;">
+            <div class="card-admin-banner" style="margin-top:16px;">
+                <div class="ia-header">
+                    <h3>🗂️ Bitácora histórica de casos (anónima)</h3>
+                    <button type="button" class="btn-accion-tabla" onclick="exportarBitacora()">⬇️ Exportar Excel (CSV)</button>
+                </div>
+                <p style="font-size:12px; color:#666; margin-bottom:10px;">Cada caso cerrado o borrado deja aquí un registro sin foto, nombre ni dirección: tipo, municipio, barrio, zona aproximada y tiempos de atención. Respeta los filtros de municipio y fechas.</p>
+                <div id="bitacoraContenido"><p style="color:#888;">Cargando...</p></div>
+            </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cards-grid">
+            <div class="card">
+                <h3 id="labelCardTotal">Total de Registros Visibles</h3>
+                <div class="number" id="totalRegistros">0</div>
+            </div>
+            <div class="card" id="cardSecundariaBox">
+                <h3 id="labelCardSecundaria">Casos Pendientes</h3>
+                <div class="number" id="casosPendientes">0</div>
+            </div>
+        </div>
+
+        <div class="filters-card" id="contenedorFiltrosGenerales">
+            <div class="filter-group" id="filtroEstadoContainer">
+                <label>Filtrar por Estado</label>
+                <select id="filtroEstado" onchange="aplicarFiltros()">
+                    <option value="todos">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En Proceso</option>
+                    <option value="resuelto">Resuelto</option>
+                    <option value="cancelada">Cancelada</option>
+                </select>
+            </div>
+
+            <div class="filter-group" id="grupoFiltroMunicipio">
+                <label>Municipio</label>
+                <select id="filtroMunicipio" onchange="aplicarFiltros()">
+                    <option value="todos">Todos los municipios</option>
+                    <option value="Bucaramanga">Bucaramanga</option>
+                    <option value="Floridablanca">Floridablanca</option>
+                    <option value="Girón">Girón</option>
+                    <option value="Piedecuesta">Piedecuesta</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Fecha Desde</label>
+                <input type="date" id="filtroFechaInicio" onchange="aplicarFiltros()">
+            </div>
+
+            <div class="filter-group">
+                <label>Fecha Hasta</label>
+                <input type="date" id="filtroFechaFin" onchange="aplicarFiltros()">
+            </div>
+
+            <button class="btn-reset-filters" onclick="limpiarFiltros()">Limpiar Filtros</button>
+            <button class="btn-reset-filters" id="btnEliminarCerrados" style="display:none; background:#c62828; color:#fff;" onclick="eliminarCerradosBandeja()">🗑️ Eliminar resueltos/cancelados</button>
+        </div>
+
+        <div class="filters-card" id="panelBloqueoUsuarios" style="display: none;">
+            <div class="filter-group">
+                <label>Correo del usuario a bloquear</label>
+                <input type="email" id="bloqueoEmail" placeholder="correo@dominio.com">
+            </div>
+            <div class="filter-group">
+                <label>Motivo</label>
+                <input type="text" id="bloqueoMotivo" placeholder="Ej: Reportes falsos reiterados">
+            </div>
+            <button type="button" class="btn-logout" style="margin-top: 16px;" onclick="bloquearUsuario()">🚫 Bloquear usuario</button>
+        </div>
+
+        <div class="table-container" id="contenedorTablaPrincipal">
+            <div class="table-header-flex">
+                <h2 id="tituloTabla">Solicitudes de Retiro de Residuos</h2>
+                <button class="btn-excel" onclick="exportarExcel()">📊 Exportar a Excel (CSV)</button>
+            </div>
+            <table>
+                <thead>
+                    <tr id="encabezadoTabla"></tr>
+                </thead>
+                <tbody id="cuerpoTabla">
+                    <tr><td colspan="7" style="text-align:center;">Cargando registros...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- FOOTER (dentro de la columna de contenido) -->
+    <footer style="text-align: center; font-size: 11px; color: #888; padding: 15px 10px; line-height: 1.4; border-top: 1px solid var(--borde-color);">
+        © 2026 EcoStan - Territorio Cívico S.A.S. Todos los derechos reservados.
+    </footer>
+    </div><!-- /app-body -->
+</div><!-- /app-shell -->
+
+    <!-- MODAL DE CHAT PARA EL ADMINISTRADOR -->
+    <div id="modalChatAdmin" class="modal-chat-backdrop">
+        <div class="modal-chat-box">
+            <div class="modal-chat-header">
+                <h3 id="chatModalTitulo">Chat del Reporte</h3>
+                <button class="btn-close-chat" onclick="cerrarChatModal()">✕</button>
+            </div>
+            <div id="chatModalBody" class="modal-chat-body">
+                <p style="text-align:center; color:#888;">Cargando mensajes...</p>
+            </div>
+            <div class="modal-chat-footer">
+                <input type="text" id="inputChatAdmin" placeholder="Escribe un mensaje al ciudadano..." onkeypress="if(event.key==='Enter') enviarMensajeAdmin()">
+                <button type="button" onclick="enviarMensajeAdmin()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POP-UP / ALERTA FLOTANTE PARA ADMINISTRADOR -->
+    <div id="adminPopupAlerta">
+        <h4 id="popupTitulo">Nuevo Reporte Ciudadano 📢</h4>
+        <p id="popupMensaje">Se ha registrado una nueva solicitud en la plataforma.</p>
+        <button class="btn-popup-ver" id="btnPopupVer" onclick="refrescarYVerAlerta()">Actualizar y Ver</button>
+    </div>
+
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!--
+  modules/rewards/rewards.html
+  Billetera de EcoPuntos y escáner QR del reciclador.
+  Fragmento HTML: core/views.js lo inserta en home.html al arrancar.
+  data-slot-destino indica en qué hueco (data-slot) de home.html va cada bloque.
+-->
+<!-- Billetera: se muestra dentro de la pantalla de educación -->
+<div class="eco-caja" data-slot-destino="educacion-billetera">
+    <strong>🎁 MI BILLETERA DE ECOPUNTOS</strong>
+    <p>Saldo disponible: <b><span id="ecoSaldo">0</span> EcoPuntos</b></p>
+    <div class="calificacion-botones">
+        <button type="button" onclick="canjearEnCicloGo()">🎟️ Ver cupones y canjear</button>
+        <button type="button" class="secundario" onclick="verHistorialEco()">Historial</button>
+    </div>
+    <div id="ecoHistorial"></div>
+</div>
+
+<!-- Escáner del QR del carnet del reciclador (se abre desde el chat de una solicitud de reciclaje) -->
+<div id="panelQR" class="panel-campana" data-slot-destino="overlays">
+    <div class="panel-campana-caja">
+        <div class="panel-campana-cabecera">
+            <strong>📷 Escanear carnet</strong>
+            <button type="button" onclick="cerrarEscanerQR()">✕</button>
+        </div>
+        <div class="eco-tarjeta">
+            <video id="qrVideo" playsinline muted style="width:100%; border-radius:12px; background:#000;"></video>
+            <p id="qrEstado" style="font-size:13px;">Apunta la cámara al código QR del carnet del reciclador.</p>
+            <label class="btn-qr secundario" style="display:inline-block;">📸 Usar una foto del QR<input id="qrFoto" type="file" accept="image/*" capture="environment" style="display:none;" onchange="leerQRDeFoto(this)"></label>
+        </div>
+    </div>
+</div>
+
+<!-- Canje de EcoPuntos por cupones de comercios aliados -->
+<div id="panelCanje" class="panel-campana" data-slot-destino="overlays">
+    <div class="panel-campana-caja">
+        <div class="panel-campana-cabecera">
+            <strong>🎟️ Canjear EcoPuntos</strong>
+            <button type="button" onclick="cerrarPanelCanje()">✕</button>
+        </div>
+        <div class="canje-tabs">
+            <button type="button" class="activa" data-canje-tab="comercios" onclick="cambiarPestanaCanje('comercios')">Comercios</button>
+            <button type="button" data-canje-tab="mis" onclick="cambiarPestanaCanje('mis')">Mis canjes</button>
+        </div>
+        <div id="canjeContenido" class="panel-campana-lista"></div>
+    </div>
+</div>

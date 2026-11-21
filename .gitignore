@@ -1,0 +1,28 @@
+# Dependencias (se reinstalan con npm install)
+node_modules/
+**/node_modules/
+
+# Android: archivos generados y datos locales
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/local.properties
+android/app/google-services.json
+android/capacitor-cordova-android-plugins/build/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Admin de escritorio (Electron/Tauri): instaladores y compilados
+admin-escritorio/dist/
+admin-escritorio/src-tauri/target/
+*.exe
+
+# Varios
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db

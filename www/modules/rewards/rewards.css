@@ -1,0 +1,67 @@
+/* ==========================================
+   modules/rewards/rewards.css
+   Historial de EcoPuntos, botón del escáner QR y confeti de celebración.
+   Las variables (--primario, --borde...) y los estilos compartidos están en estilos.css
+========================================== */
+.eco-mov { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+.eco-mas { color: #2e7d32; }
+.eco-menos { color: #c62828; }
+
+.btn-qr {
+    border: none;
+    border-radius: 24px;
+    padding: 12px 18px;
+    background: #2e7d32;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-qr.secundario { background: #fff; color: #2e7d32; border: 1px solid #2e7d32; }
+
+.confeti {
+    position: fixed;
+    top: -12px;
+    width: 9px;
+    height: 14px;
+    border-radius: 2px;
+    z-index: 20000;
+    pointer-events: none;
+    animation: caer-confeti 1.8s ease-in forwards;
+}
+
+@keyframes caer-confeti {
+    to { transform: translateY(105vh) rotate(540deg); opacity: 0.8; }
+}
+
+/* ---------- Canje de cupones ---------- */
+.canje-tabs { display: flex; gap: 6px; padding: 8px 8px 0; }
+.canje-tabs button { flex: 1; border: none; border-radius: 20px; padding: 9px; background: #eef3ee; color: #2e7d32; font-weight: 700; cursor: pointer; }
+.canje-tabs button.activa { background: #2e7d32; color: #fff; }
+.canje-saldo { text-align: center; margin: 6px 0 10px; }
+.canje-card { background: #fff; border: 1px solid #e3e8e3; border-radius: 14px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+.canje-card p { margin: 2px 0; font-size: 14px; }
+.canje-card.usado { opacity: .6; }
+.canje-card .btn-qr { margin-top: 6px; }
+.canje-card .btn-qr[disabled] { opacity: .45; cursor: not-allowed; }
+.canje-codigo { align-items: center; text-align: center; }
+#canjeQR { padding: 10px; background: #fff; }
+.canje-texto { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: #2e7d32; }
+.canje-oferta { border-top: 1px dashed #d5ddd5; padding-top: 8px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+
+.canje-bloqueo { background: #fff8e1; border-left: 4px solid #f9a825; border-radius: 10px; padding: 10px; font-size: 13px; line-height: 1.4; margin-bottom: 10px; }
+
+.qr-reloj { font-size: 22px; font-weight: 800; color: #2e7d32; text-align: center; margin: 6px 0; }
+.qr-reloj.urgente { color: #c62828; animation: parpadeo 1s infinite; }
+@keyframes parpadeo { 50% { opacity: .45; } }
+
+/* ---- Catálogo de comercios: categorías, foto y "Cómo llegar" ---- */
+.canje-cats { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; margin: 0 -2px; -webkit-overflow-scrolling: touch; }
+.canje-cat { flex: 0 0 auto; padding: 8px 14px; border-radius: 999px; border: 1px solid #cfdacf; background: #fff; color: #2e5d34; font-size: 13px; font-weight: 600; cursor: pointer; }
+.canje-cat.activa { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+.canje-foto { display: block; width: calc(100% + 24px); margin: -12px -12px 10px; height: 150px; object-fit: cover; border-radius: 14px 14px 0 0; background: #e8efe8; }
+.canje-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.canje-badge { flex: 0 0 auto; background: #e7f3e8; color: #2e7d32; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.canje-desc { color: #4b5a4b; font-size: 13px; }
+.canje-maps { display: inline-block; margin: 8px 0 4px; padding: 8px 14px; border-radius: 10px; background: #e8f0fe; color: #1a56c4; font-size: 13px; font-weight: 700; text-decoration: none; }

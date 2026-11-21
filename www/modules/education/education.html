@@ -1,0 +1,39 @@
+<!--
+  modules/education/education.html
+  Eco-Academia: progreso, trivia del día, módulos y guías. La billetera la aporta rewards.html.
+  Fragmento HTML: core/views.js lo inserta en home.html al arrancar.
+  data-slot-destino indica en qué hueco (data-slot) de home.html va cada bloque.
+-->
+<!-- EDUCACIÓN AMBIENTAL -->
+<section id="educacion" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Educación ambiental</h2>
+            <p>Aprende cómo manejar correctamente los residuos.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+    </div>
+
+    <div id="ecoPanel" class="eco-panel">
+    <p id="ecoAviso" class="aviso-vacio">Cargando tu progreso...</p>
+    <div id="ecoContenido" class="eco-contenido" hidden>
+        <div id="ecoEncabezado" class="eco-slot"></div>
+        <div id="ecoTrivia" class="eco-slot"></div>
+        <div id="ecoAcademia" class="eco-slot"></div>
+        <div data-slot="educacion-billetera"></div>
+    </div>
+</div>
+
+    <h3 class="eco-subtitulo">📖 Guías rápidas · ¿En qué caneco va?</h3>
+    <p class="aviso-vacio" style="text-align:left; margin:0 0 10px;">Toca un caneco para ver qué va dentro.</p>
+    <div class="caneco-grid" id="canecoGrid"></div>
+
+    <h3 class="eco-subtitulo" style="margin-top:22px;">📰 Noticias del planeta</h3>
+    <div class="noticias-tabs">
+        <button type="button" class="activa" data-ambito="todas" onclick="filtrarNoticias('todas', this)">Todas</button>
+        <button type="button" data-ambito="colombia" onclick="filtrarNoticias('colombia', this)">🌄 Colombia</button>
+        <button type="button" data-ambito="mundo" onclick="filtrarNoticias('mundo', this)">🌍 Mundo</button>
+    </div>
+    <div id="noticiasLista" class="noticias-lista"><p class="aviso-vacio">Cargando noticias…</p></div>
+    <small class="noticias-nota">Resúmenes hechos con inteligencia artificial a partir de ONU Noticias, el Ministerio de Ambiente, Parques Nacionales e IDEAM. Toca una noticia para leerla completa en su fuente.</small>
+</section>

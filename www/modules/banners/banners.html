@@ -1,0 +1,22 @@
+<!--
+  modules/banners/banners.html
+  Carrusel deslizante de inicio y pantalla de avisos.
+  Fragmento HTML: core/views.js lo inserta en home.html al arrancar.
+  data-slot-destino indica en qué hueco (data-slot) de home.html va cada bloque.
+-->
+<div class="banner-carousel-wrap" data-slot-destino="inicio-banners">
+    <div class="banner-track" id="bannerTrack"></div>
+    <div class="banner-dots" id="bannerDots"></div>
+</div>
+
+<!-- AVISOS -->
+<section id="avisos" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Avisos ciudadanos</h2>
+            <p>Información importante sobre el servicio.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+    </div>
+
+</section>

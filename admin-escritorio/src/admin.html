@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - EcoSTAN / Ciudad Limpia</title>
+    
+    <!-- Librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --verde-gobierno: #1b4332;
+            --verde-suave: #2d6a4f;
+            --fondo-gris: #f4f6f8;
+            --texto-oscuro: #333;
+            --borde-color: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--fondo-gris);
+            color: var(--texto-oscuro);
+            padding: 20px;
+        }
+
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-panel h1 {
+            font-size: 20px;
+            color: var(--verde-gobierno);
+        }
+
+        .selector-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .selector-container select, .filter-group select, .filter-group input {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--borde-color);
+            font-size: 13px;
+            outline: none;
+            background-color: #fff;
+        }
+
+        .btn-excel {
+            padding: 8px 14px;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-logout {
+            padding: 8px 14px;
+            background-color: #c62828;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .card h3 {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--verde-gobierno);
+        }
+
+        .filters-card {
+            background: #fff;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #555;
+            text-transform: uppercase;
+        }
+
+        .btn-reset-filters {
+            padding: 8px 12px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+
+        .table-container {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .table-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            padding: 12px;
+            color: #555;
+            font-weight: 600;
+            border-bottom: 2px solid var(--borde-color);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--borde-color);
+            vertical-align: middle;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-pendiente { background: #ffe0b2; color: #e65100; }
+        .status-en_proceso { background: #bbdefb; color: #0d47a1; }
+        .status-resuelto { background: #c8e6c9; color: #1b5e20; }
+        .status-cancelada { background: #ffcdd2; color: #b71c1c; }
+
+        select.select-estado {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 12px;
+        }
+
+        .btn-chat-admin {
+            padding: 6px 10px;
+            background-color: var(--verde-gobierno);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-chat-admin:hover {
+            background-color: var(--verde-suave);
+        }
+
+        .btn-accion-tabla {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .btn-accion-tabla:hover {
+            background: #c8e6c9;
+        }
+
+        .gps-link {
+            display: inline-block;
+            color: var(--verde-gobierno);
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .gps-link:hover {
+            text-decoration: underline;
+        }
+
+        /* MODAL DEL CHAT ADMINISTRATIVO */
+        .modal-chat-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modal-chat-backdrop.activo {
+            display: flex;
+        }
+
+        .modal-chat-box {
+            background: #fff;
+            width: 90%;
+            max-width: 500px;
+            height: 80vh;
+            max-height: 600px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal-chat-header {
+            background: var(--verde-gobierno);
+            color: #fff;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-chat-header h3 {
+            font-size: 15px;
+            margin: 0;
+        }
+
+        .btn-close-chat {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .modal-chat-body {
+            flex: 1;
+            padding: 15px;
+            background: #f8f9fa;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .chat-msg.institucion {
+            align-self: flex-end;
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .chat-msg.usuario {
+            align-self: flex-start;
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+
+        .chat-msg .msg-time {
+            display: block;
+            font-size: 10px;
+            color: #777;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .modal-chat-footer {
+            padding: 12px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-chat-footer input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .modal-chat-footer button {
+            padding: 8px 16px;
+            background: var(--verde-gobierno);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* POP-UP / ALERTA FLOTANTE PARA ADMINISTRADOR */
+        #adminPopupAlerta {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #ffffff;
+            border-left: 6px solid var(--verde-gobierno);
+            padding: 16px 20px;
+            border-radius: 10px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 99999;
+            max-width: 360px;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        #adminPopupAlerta.activo {
+            display: block;
+        }
+
+        #adminPopupAlerta h4 {
+            color: var(--verde-gobierno);
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        #adminPopupAlerta p {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .btn-popup-ver {
+            background: var(--verde-gobierno);
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-panel">
+        <h1>Panel de Gestión y Control</h1>
+        <div class="selector-container">
+            <label for="selectBandeja"><strong>Bandeja:</strong></label>
+            <select id="selectBandeja" onchange="cambiarBandeja()">
+                <option value="reportes_retiro" id="optRetiro">♻️ Solicitar Gestión de Residuos</option>
+                <option value="reportes_abandonados" id="optAbandonados">🗑️ Reportar problemas de la ciudad</option>
+                <option value="reportes_violencia_animal" id="optViolenciaAnimal">🐾 Violencia Animal</option>
+                <option value="reportes_ciudadania" id="optCiudadania">💡 Ciudadanía Activa</option>
+                <option value="usuarios_registrados" id="optUsuarios">👥 Usuarios Registrados</option>
+                <option value="usuarios_bloqueados" id="optBloqueados">🚫 Usuarios Bloqueados</option>
+            </select>
+            <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+        </div>
+    </div>
+
+    <div class="cards-grid">
+        <div class="card">
+            <h3 id="labelCardTotal">Total de Registros Visibles</h3>
+            <div class="number" id="totalRegistros">0</div>
+        </div>
+        <div class="card" id="cardSecundariaBox">
+            <h3 id="labelCardSecundaria">Casos Pendientes</h3>
+            <div class="number" id="casosPendientes">0</div>
+        </div>
+    </div>
+
+    <div class="filters-card" id="contenedorFiltrosGenerales">
+        <div class="filter-group" id="filtroEstadoContainer">
+            <label>Filtrar por Estado</label>
+            <select id="filtroEstado" onchange="aplicarFiltros()">
+                <option value="todos">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="en_proceso">En Proceso</option>
+                <option value="resuelto">Resuelto</option>
+                <option value="cancelada">Cancelada</option>
+            </select>
+        </div>
+
+        <div class="filter-group" id="grupoFiltroMunicipio">
+            <label>Municipio</label>
+            <select id="filtroMunicipio" onchange="aplicarFiltros()">
+                <option value="todos">Todos los municipios</option>
+                <option value="Bucaramanga">Bucaramanga</option>
+                <option value="Floridablanca">Floridablanca</option>
+                <option value="Girón">Girón</option>
+                <option value="Piedecuesta">Piedecuesta</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Fecha Desde</label>
+            <input type="date" id="filtroFechaInicio" onchange="aplicarFiltros()">
+        </div>
+
+        <div class="filter-group">
+            <label>Fecha Hasta</label>
+            <input type="date" id="filtroFechaFin" onchange="aplicarFiltros()">
+        </div>
+
+        <button class="btn-reset-filters" onclick="limpiarFiltros()">Limpiar Filtros</button>
+    </div>
+
+    <div class="filters-card" id="panelBloqueoUsuarios" style="display: none;">
+        <div class="filter-group">
+            <label>Correo del usuario a bloquear</label>
+            <input type="email" id="bloqueoEmail" placeholder="correo@dominio.com">
+        </div>
+        <div class="filter-group">
+            <label>Motivo</label>
+            <input type="text" id="bloqueoMotivo" placeholder="Ej: Reportes falsos reiterados">
+        </div>
+        <button type="button" class="btn-logout" style="margin-top: 16px;" onclick="bloquearUsuario()">🚫 Bloquear usuario</button>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header-flex">
+            <h2 id="tituloTabla">Solicitudes de Retiro de Residuos</h2>
+            <button class="btn-excel" onclick="exportarExcel()">📊 Exportar a Excel (CSV)</button>
+        </div>
+        <table>
+            <thead>
+                <tr id="encabezadoTabla"></tr>
+            </thead>
+            <tbody id="cuerpoTabla">
+                <tr><td colspan="7" style="text-align:center;">Cargando registros...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- MODAL DE CHAT PARA EL ADMINISTRADOR -->
+    <div id="modalChatAdmin" class="modal-chat-backdrop">
+        <div class="modal-chat-box">
+            <div class="modal-chat-header">
+                <h3 id="chatModalTitulo">Chat del Reporte</h3>
+                <button class="btn-close-chat" onclick="cerrarChatModal()">✕</button>
+            </div>
+            <div id="chatModalBody" class="modal-chat-body">
+                <p style="text-align:center; color:#888;">Cargando mensajes...</p>
+            </div>
+            <div class="modal-chat-footer">
+                <input type="text" id="inputChatAdmin" placeholder="Escribe un mensaje al ciudadano..." onkeypress="if(event.key==='Enter') enviarMensajeAdmin()">
+                <button type="button" onclick="enviarMensajeAdmin()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POP-UP / ALERTA FLOTANTE PARA ADMINISTRADOR -->
+    <div id="adminPopupAlerta">
+        <h4 id="popupTitulo">Nuevo Reporte Ciudadano 📢</h4>
+        <p id="popupMensaje">Se ha registrado una nueva solicitud en la plataforma.</p>
+        <button class="btn-popup-ver" id="btnPopupVer" onclick="refrescarYVerAlerta()">Actualizar y Ver</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://afwlonmlxzwkmiumpsyt.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_8C7CKRVixeJmD9BsnTJQ3A_aVzU-wey';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let dependenciaUsuario = (localStorage.getItem('userDependencia') || '').toLowerCase();
+        let datosOriginales = [];
+        let datosFiltrados = [];
+        let reporteActivoChat = null;
+
+        // Variables para Sistema Empresarial de Alertas Masivas (Cola)
+        let colaReportesNuevos = [];
+        let alertaEnProceso = false;
+        let alertaChatPendiente = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('selectBandeja');
+            const optAbandonados = document.getElementById('optAbandonados');
+            const optViolenciaAnimal = document.getElementById('optViolenciaAnimal');
+            const optCiudadania = document.getElementById('optCiudadania');
+            const optUsuarios = document.getElementById('optUsuarios');
+            const optBloqueados = document.getElementById('optBloqueados');
+
+            if (dependenciaUsuario === 'recicladores' || dependenciaUsuario === 'aseo') {
+                if (optAbandonados) optAbandonados.remove();
+                if (optViolenciaAnimal) optViolenciaAnimal.remove();
+                if (optCiudadania) optCiudadania.remove();
+                if (optUsuarios) optUsuarios.remove();
+                if (optBloqueados) optBloqueados.remove();
+                select.value = 'reportes_retiro';
+            }
+
+            cargarDatosBandeja();
+            iniciarEscuchaRealtimeAdmin();
+            solicitarPermisoNotificacionesEscritorio();
+        });
+
+        function cambiarBandeja() {
+            limpiarFiltros();
+            cargarDatosBandeja();
+        }
+
+        async function cargarDatosBandeja() {
+            const tabla = document.getElementById('selectBandeja').value;
+            const titulos = {
+                'reportes_retiro': 'Solicitudes de Gestión de Residuos',
+                'reportes_abandonados': 'Reportes de Problemas de la Ciudad',
+                'reportes_violencia_animal': 'Reportes de Violencia Animal',
+                'reportes_ciudadania': 'Propuestas y Veeduría - Ciudadanía Activa',
+                'usuarios_registrados': 'Listado de Usuarios Registrados',
+                'usuarios_bloqueados': 'Gestión de Usuarios Bloqueados (Lista Negra)'
+            };
+            document.getElementById('tituloTabla').textContent = titulos[tabla] || 'Listado';
+
+            const filtrosCard = document.getElementById('contenedorFiltrosGenerales');
+            const cardSecundaria = document.getElementById('cardSecundariaBox');
+
+            const panelBloqueo = document.getElementById('panelBloqueoUsuarios');
+            if (panelBloqueo) panelBloqueo.style.display = (tabla === 'usuarios_bloqueados') ? 'flex' : 'none';
+
+            if (tabla === 'usuarios_registrados' || tabla === 'usuarios_bloqueados') {
+                if (filtrosCard) filtrosCard.style.display = 'none';
+                if (cardSecundaria) cardSecundaria.style.display = 'none';
+                document.getElementById('labelCardTotal').textContent = (tabla === 'usuarios_bloqueados') ? 'Total Usuarios Bloqueados' : 'Total Usuarios Registrados';
+            } else {
+                if (filtrosCard) filtrosCard.style.display = 'flex';
+                if (cardSecundaria) cardSecundaria.style.display = 'block';
+                document.getElementById('labelCardTotal').textContent = 'Total de Registros Visibles';
+            }
+
+            try {
+                const { data, error } = await supabaseClient.from(tabla).select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                datosOriginales = data || [];
+                aplicarFiltros();
+            } catch (err) {
+                document.getElementById('cuerpoTabla').innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">Error: ${err.message}</td></tr>`;
+            }
+        }
+
+        function iniciarEscuchaRealtimeAdmin() {
+            const tablasMonitoreadas = ['reportes_retiro', 'reportes_abandonados', 'reportes_violencia_animal', 'reportes_ciudadania', 'usuarios_registrados'];
+            
+            tablasMonitoreadas.forEach(tabla => {
+                supabaseClient
+                    .channel(`admin-realtime-enterprise-${tabla}`)
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: tabla }, payload => {
+                        if (tabla !== 'usuarios_registrados' && bandejaDisponible(tabla)) {
+                            colaReportesNuevos.push({ tipo: 'reporte', tabla: tabla, data: payload.new });
+                            procesarColaAlertas();
+                        }
+                    })
+                    .subscribe();
+            });
+
+            // Mensajes nuevos que los ciudadanos escriben en el chat de sus reportes
+            supabaseClient
+                .channel('admin-realtime-enterprise-chat')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_reportes' }, payload => {
+                    manejarMensajeCiudadano(payload.new);
+                })
+                .subscribe();
+        }
+
+        function procesarColaAlertas() {
+            if (alertaEnProceso || colaReportesNuevos.length === 0) return;
+            
+            alertaEnProceso = true;
+            const itemActual = colaReportesNuevos.shift();
+            mostrarPopupEmpresarial(itemActual.tabla, itemActual.data, itemActual.tipo);
+        }
+
+        function bandejaDisponible(tabla) {
+            const select = document.getElementById('selectBandeja');
+            return Array.from(select.options).some(op => op.value === tabla);
+        }
+
+        async function manejarMensajeCiudadano(mensaje) {
+            if (!mensaje || mensaje.emisor !== 'usuario') return;
+            if (!bandejaDisponible(mensaje.tabla_origen)) return;
+
+            // Si el chat de ese reporte ya está abierto, solo se actualiza y suena el aviso
+            if (reporteActivoChat && String(reporteActivoChat.id) === String(mensaje.reporte_id)) {
+                cargarMensajesModalAdmin();
+                reproducirBeepEmpresarial();
+                return;
+            }
+
+            // Código del reporte para mostrarlo en la alerta
+            let codigoMostrar = `#${String(mensaje.reporte_id).substring(0, 6)}`;
+            try {
+                const { data } = await supabaseClient.from(mensaje.tabla_origen).select('codigo').eq('id', mensaje.reporte_id).single();
+                if (data && data.codigo) codigoMostrar = `#${data.codigo}`;
+            } catch (e) {}
+
+            colaReportesNuevos.push({ tipo: 'chat', tabla: mensaje.tabla_origen, data: { ...mensaje, codigoMostrar: codigoMostrar } });
+            procesarColaAlertas();
+        }
+
+        function solicitarPermisoNotificacionesEscritorio() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                try { Notification.requestPermission(); } catch (e) {}
+            }
+        }
+
+        function notificarEscritorio(titulo, cuerpo) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try { new Notification(titulo, { body: cuerpo }); } catch (e) {}
+            }
+        }
+
+        function mostrarPopupEmpresarial(tabla, nuevoItem, tipo = 'reporte') {
+            const popup = document.getElementById('adminPopupAlerta');
+            const titulo = document.getElementById('popupTitulo');
+            const msg = document.getElementById('popupMensaje');
+            const btnVer = document.getElementById('btnPopupVer');
+            
+            const nombresTablas = {
+                'reportes_retiro': '♻️ Retiro de Residuos',
+                'reportes_abandonados': '🗑️ Problema Ciudadano',
+                'reportes_violencia_animal': '🐾 Violencia Animal',
+                'reportes_ciudadania': '💡 Ciudadanía Activa'
+            };
+
+            if (bandejaDisponible(tabla)) {
+                document.getElementById('selectBandeja').value = tabla;
+            }
+
+            const totalPendientesCola = colaReportesNuevos.length;
+            const badgeCola = totalPendientesCola > 0 ? ` <span style="background:#c62828; color:#fff; padding:2px 6px; border-radius:10px; font-size:11px;">+${totalPendientesCola} en cola</span>` : '';
+
+            if (tipo === 'chat') {
+                alertaChatPendiente = { id: nuevoItem.reporte_id, tabla: tabla, codigo: nuevoItem.codigoMostrar };
+                const vistaPrevia = String(nuevoItem.mensaje || '').substring(0, 80);
+
+                titulo.innerHTML = `Nuevo Mensaje de Ciudadano 💬${badgeCola}`;
+                msg.innerHTML = `<strong>${nombresTablas[tabla] || 'Incidencia'}</strong><br>Reporte ${escaparHTML(nuevoItem.codigoMostrar)}<br><small style="color:#666;">"${escaparHTML(vistaPrevia)}"</small>`;
+                btnVer.textContent = 'Abrir chat';
+                notificarEscritorio('Nuevo mensaje de ciudadano', `${nuevoItem.codigoMostrar}: ${vistaPrevia}`);
+            } else {
+                alertaChatPendiente = null;
+
+                titulo.innerHTML = `Nuevo Reporte Entrante${badgeCola}`;
+                msg.innerHTML = `<strong>${nombresTablas[tabla] || 'Incidencia'}</strong><br>Código: #${nuevoItem.codigo || nuevoItem.id}<br><small style="color:#666;">Municipio: ${nuevoItem.municipio || 'No especificado'}</small>`;
+                btnVer.textContent = 'Actualizar y Ver';
+                notificarEscritorio('Nuevo reporte entrante', `${nombresTablas[tabla] || 'Incidencia'} - #${nuevoItem.codigo || nuevoItem.id}`);
+            }
+            
+            popup.classList.add('activo');
+            reproducirBeepEmpresarial();
+        }
+
+        function reproducirBeepEmpresarial() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 587.33;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            } catch(e) {}
+        }
+
+        function refrescarYVerAlerta() {
+            const popup = document.getElementById('adminPopupAlerta');
+            popup.classList.remove('activo');
+            alertaEnProceso = false;
+
+            const chatPendiente = alertaChatPendiente;
+            alertaChatPendiente = null;
+            
+            cargarDatosBandeja().then(() => {
+                if (chatPendiente) {
+                    abrirChatModal(chatPendiente.id, chatPendiente.tabla, chatPendiente.codigo);
+                }
+                setTimeout(() => {
+                    procesarColaAlertas();
+                }, 400);
+            });
+        }
+
+        function aplicarFiltros() {
+            const tabla = document.getElementById('selectBandeja').value;
+            
+            if (tabla === 'usuarios_registrados' || tabla === 'usuarios_bloqueados') {
+                datosFiltrados = [...datosOriginales];
+                renderizarTabla();
+                return;
+            }
+
+            const estadoSel = document.getElementById('filtroEstado').value;
+            const municipioSel = document.getElementById('filtroMunicipio').value;
+            const fechaIni = document.getElementById('filtroFechaInicio').value;
+            const fechaFin = document.getElementById('filtroFechaFin').value;
+
+            datosFiltrados = datosOriginales.filter(item => {
+                if (estadoSel !== 'todos' && (item.estado || 'pendiente').toLowerCase() !== estadoSel) return false;
+                if (tabla !== 'reportes_ciudadania' && municipioSel !== 'todos' && (item.municipio || '').toLowerCase() !== municipioSel.toLowerCase()) return false;
+                
+                if (fechaIni) {
+                    const fechaItem = new Date(item.created_at).toISOString().split('T')[0];
+                    if (fechaItem < fechaIni) return false;
+                }
+                if (fechaFin) {
+                    const fechaItem = new Date(item.created_at).toISOString().split('T')[0];
+                    if (fechaItem > fechaFin) return false;
+                }
+                return true;
+            });
+
+            renderizarTabla();
+        }
+
+        function renderizarTabla() {
+            const tabla = document.getElementById('selectBandeja').value;
+            const cuerpo = document.getElementById('cuerpoTabla');
+            const encabezado = document.getElementById('encabezadoTabla');
+            const esListaUsuarios = (tabla === 'usuarios_registrados' || tabla === 'usuarios_bloqueados');
+
+            document.getElementById('totalRegistros').textContent = datosFiltrados.length;
+            if (!esListaUsuarios) {
+                document.getElementById('casosPendientes').textContent = datosFiltrados.filter(r => (r.estado || '').toLowerCase() === 'pendiente').length;
+            }
+
+            if (tabla === 'reportes_retiro') {
+                encabezado.innerHTML = `<th>Código / Fecha</th><th>Tipo Residuo</th><th>Foto y Descarga</th><th>Ubicación GPS / Ruta</th><th>Municipio</th><th>Estado Actual</th><th>Cambiar Estado</th><th>Acciones</th>`;
+            } else if (tabla === 'reportes_abandonados') {
+                encabezado.innerHTML = `<th>Código / Fecha</th><th>Afectación</th><th>Foto y Descarga</th><th>Ubicación GPS / Ruta</th><th>Municipio</th><th>Lugar</th><th>Estado Actual</th><th>Cambiar Estado</th><th>Acciones</th>`;
+            } else if (tabla === 'reportes_violencia_animal') {
+                encabezado.innerHTML = `<th>Código / Fecha</th><th>Tipo Situación</th><th>Foto y Descarga</th><th>Ubicación GPS</th><th>Municipio</th><th>Lugar / Detalle</th><th>Estado Actual</th><th>Cambiar Estado</th><th>Acciones</th>`;
+            } else if (tabla === 'reportes_ciudadania') {
+                encabezado.innerHTML = `<th>Código / Fecha</th><th>Tipo Propuesta</th><th>Detalle</th><th>Estado Actual</th><th>Cambiar Estado</th><th>Acciones</th>`;
+            } else if (tabla === 'usuarios_registrados') {
+                encabezado.innerHTML = `<th>Fecha Registro</th><th>Nombre Completo</th><th>Correo Electrónico</th><th>Edad</th><th>Barrio de Residencia</th>`;
+            } else if (tabla === 'usuarios_bloqueados') {
+                encabezado.innerHTML = `<th>Fecha de Bloqueo</th><th>Correo Electrónico</th><th>Motivo</th><th>Acciones</th>`;
+            }
+
+            if (datosFiltrados.length === 0) {
+                cuerpo.innerHTML = `<tr><td colspan="9" style="text-align:center;">No hay registros.</td></tr>`;
+                return;
+            }
+
+            cuerpo.innerHTML = datosFiltrados.map(item => {
+                const fecha = new Date(item.created_at).toLocaleString();
+
+                if (tabla === 'usuarios_registrados') {
+                    return `
+                        <tr>
+                            <td>${fecha}</td>
+                            <td><strong>${item.nombre || 'No registrado'}</strong></td>
+                            <td>${item.email || 'Sin correo'}</td>
+                            <td>${item.edad !== null && item.edad !== undefined ? item.edad : '---'}</td>
+                            <td>${item.barrio || '---'}</td>
+                        </tr>
+                    `;
+                }
+
+                if (tabla === 'usuarios_bloqueados') {
+                    return `
+                        <tr>
+                            <td>${fecha}</td>
+                            <td><strong>${escaparHTML(item.email)}</strong></td>
+                            <td>${escaparHTML(item.motivo) || '---'}</td>
+                            <td><button class="btn-chat-admin" onclick="desbloquearUsuario('${item.id}')">✅ Desbloquear</button></td>
+                        </tr>
+                    `;
+                }
+
+                const codigo = item.codigo ? `#${item.codigo}` : `#${String(item.id).substring(0,6)}`;
+                const estado = (item.estado || 'pendiente').toLowerCase();
+                const municipioTexto = item.municipio || 'No especificado';
+                
+                let fotoHtml = 'Sin foto';
+                if (item.foto_url) {
+                    const nombreArchivo = `foto_${item.codigo || item.id}.jpg`;
+                    fotoHtml = `
+                        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+                            <a href="${item.foto_url}" target="_blank">
+                                <img src="${item.foto_url}" style="width:45px; height:45px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
+                            </a>
+                            <a href="${item.foto_url}" download="${nombreArchivo}" target="_blank" class="btn-accion-tabla">📥 Descargar</a>
+                        </div>
+                    `;
+                }
+
+                let gpsHtml = 'No disponible';
+                if (item.latitud && item.longitud) {
+                    const urlMaps = `https://www.google.com/maps/search/?api=1&query=${item.latitud},${item.longitud}`;
+                    gpsHtml = `
+                        <div style="font-size:11px; color:#555;">
+                            Lat: ${item.latitud}<br>Lon: ${item.longitud}<br>
+                            <a href="${urlMaps}" target="_blank" class="gps-link">📍 Ver en Mapa / Ruta</a>
+                        </div>
+                    `;
+                } else if (item.lugar_gps) {
+                    gpsHtml = `<span style="font-size:11px; color:#666;">${item.lugar_gps}</span>`;
+                }
+
+                let detalleEspecifico = '';
+                if (tabla === 'reportes_retiro') {
+                    detalleEspecifico = `<td>${item.tipo_residuo || item.nombre_reporte || 'Varios'}</td><td>${fotoHtml}</td><td>${gpsHtml}</td><td>${municipioTexto}</td>`;
+                } else if (tabla === 'reportes_abandonados') {
+                    detalleEspecifico = `<td>${item.tipo_afectacion || 'General'}</td><td>${fotoHtml}</td><td>${gpsHtml}</td><td>${municipioTexto}</td><td>${item.lugar_direccion || 'No registrada'}</td>`;
+                } else if (tabla === 'reportes_violencia_animal') {
+                    detalleEspecifico = `<td>${item.tipo_situacion || 'Maltrato'}</td><td>${fotoHtml}</td><td>${gpsHtml}</td><td>${municipioTexto}</td><td>${item.lugar_direccion || ''}<br><small>${item.detalle_situacion || ''}</small></td>`;
+                } else {
+                    detalleEspecifico = `<td>${item.tipo_propuesta || 'Sugerencia'}</td><td>${item.detalle_propuesta || ''}</td>`;
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${codigo}</strong><br><small style="color:#777">${fecha}</small></td>
+                        ${detalleEspecifico}
+                        <td><span class="status-badge status-${estado}">${estado}</span></td>
+                        <td>
+                            <select class="select-estado" onchange="actualizarEstado('${tabla}', '${item.id}', this.value, '${item.codigo || ''}')">
+                                <option value="pendiente" ${estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                                <option value="en_proceso" ${estado === 'en_proceso' ? 'selected' : ''}>En Proceso</option>
+                                <option value="resuelto" ${estado === 'resuelto' ? 'selected' : ''}>Resuelto</option>
+                                <option value="cancelada" ${estado === 'cancelada' ? 'selected' : ''}>Cancelada</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn-chat-admin" onclick="abrirChatModal('${item.id}', '${tabla}', '${codigo}')">💬 Chat</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function limpiarFiltros() {
+            document.getElementById('filtroEstado').value = 'todos';
+            document.getElementById('filtroMunicipio').value = 'todos';
+            document.getElementById('filtroFechaInicio').value = '';
+            document.getElementById('filtroFechaFin').value = '';
+            aplicarFiltros();
+        }
+
+        async function actualizarEstado(tabla, id, nuevoEstado, codigoItem) {
+            try {
+                const { error } = await supabaseClient.from(tabla).update({ estado: nuevoEstado }).eq('id', id);
+                if (error) throw error;
+
+                if (nuevoEstado === 'resuelto') {
+                    const horaHora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const msgResuelto = `Hola,\n\nTu aviso ${codigoItem ? 'nº ' + codigoItem : ''} ha sido atendido y resuelto por el personal de la Alcaldía de Bucaramanga / Ciudad Limpia.\n\nGracias por reportar y ayudar a proteger nuestra ciudad y bienestar animal 🐾`;
+
+                    await supabaseClient.from('chat_reportes').insert([
+                        { reporte_id: id, tabla_origen: tabla, mensaje: msgResuelto, emisor: 'institucion', hora: horaHora }
+                    ]);
+                }
+
+                alert("¡Estado actualizado correctamente!");
+                const item = datosOriginales.find(r => String(r.id) === String(id));
+                if (item) item.estado = nuevoEstado;
+                aplicarFiltros();
+            } catch (err) {
+                alert("Error al actualizar estado: " + err.message);
+            }
+        }
+
+        /* ==========================================
+           GESTIÓN DE USUARIOS BLOQUEADOS (LISTA NEGRA)
+        ========================================== */
+        function escaparHTML(texto) {
+            return String(texto === null || texto === undefined ? '' : texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        async function bloquearUsuario() {
+            const email = (document.getElementById('bloqueoEmail').value || '').trim().toLowerCase();
+            const motivo = (document.getElementById('bloqueoMotivo').value || '').trim();
+
+            if (!email || !email.includes('@')) {
+                alert("Escribe un correo electrónico válido.");
+                return;
+            }
+
+            try {
+                const { data: existente, error: errorBusqueda } = await supabaseClient
+                    .from('usuarios_bloqueados')
+                    .select('email')
+                    .eq('email', email)
+                    .limit(1);
+                if (errorBusqueda) throw errorBusqueda;
+
+                if (existente && existente.length > 0) {
+                    alert("Este usuario ya se encuentra bloqueado.");
+                    return;
+                }
+
+                const { error } = await supabaseClient.from('usuarios_bloqueados').insert([{ email: email, motivo: motivo }]);
+                if (error) throw error;
+
+                document.getElementById('bloqueoEmail').value = '';
+                document.getElementById('bloqueoMotivo').value = '';
+                alert("Usuario bloqueado correctamente.");
+                await cargarDatosBandeja();
+            } catch (err) {
+                alert("Error al bloquear usuario: " + err.message);
+            }
+        }
+
+        async function desbloquearUsuario(id) {
+            const usuario = datosOriginales.find(r => String(r.id) === String(id));
+            const etiqueta = usuario && usuario.email ? usuario.email : 'este usuario';
+            if (!confirm(`¿Deseas desbloquear a ${etiqueta}?`)) return;
+
+            try {
+                const { error } = await supabaseClient.from('usuarios_bloqueados').delete().eq('id', id);
+                if (error) throw error;
+
+                alert("Usuario desbloqueado correctamente.");
+                await cargarDatosBandeja();
+            } catch (err) {
+                alert("Error al desbloquear usuario: " + err.message);
+            }
+        }
+
+        /* ==========================================
+           LÓGICA DEL CHAT ADMINISTRATIVO
+        ========================================== */
+        async function abrirChatModal(id, tablaOrigen, codigo) {
+            reporteActivoChat = { id, tablaOrigen, codigo };
+            document.getElementById('chatModalTitulo').textContent = `Chat - Reporte ${codigo}`;
+            document.getElementById('modalChatAdmin').classList.add('activo');
+            await cargarMensajesModalAdmin();
+        }
+
+        function cerrarChatModal() {
+            document.getElementById('modalChatAdmin').classList.remove('activo');
+            reporteActivoChat = null;
+        }
+
+        async function cargarMensajesModalAdmin() {
+            if (!reporteActivoChat) return;
+            const body = document.getElementById('chatModalBody');
+
+            try {
+                // Se agregan los filtros estrictos por ID y tabla de origen para evitar mezclar chats antiguos
+                const { data, error } = await supabaseClient
+                    .from('chat_reportes')
+                    .select('*')
+                    .eq('reporte_id', String(reporteActivoChat.id))
+                    .eq('tabla_origen', reporteActivoChat.tablaOrigen)
+                    .order('created_at', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    body.innerHTML = `<p style="text-align:center; color:#888; font-size:13px; margin-top:20px;">Sin mensajes registrados en este chat.</p>`;
+                    return;
+                }
+
+                body.innerHTML = data.map(m => `
+                    <div class="chat-msg ${m.emisor === 'institucion' ? 'institucion' : 'usuario'}">
+                        <strong>${m.emisor === 'institucion' ? 'Administrador' : 'Ciudadano'}:</strong>
+                        <p style="margin-top:4px;">${m.mensaje.replace(/\n/g, '<br>')}</p>
+                        <span class="msg-time">${m.hora || ''}</span>
+                    </div>
+                `).join('');
+
+                body.scrollTop = body.scrollHeight;
+            } catch (err) {
+                body.innerHTML = `<p style="color:red; text-align:center;">Error al cargar mensajes: ${err.message}</p>`;
+            }
+        }
+
+        async function enviarMensajeAdmin() {
+            const input = document.getElementById('inputChatAdmin');
+            const mensaje = input.value.trim();
+            if (!mensaje || !reporteActivoChat) return;
+
+            const horaAhora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            try {
+                const { error } = await supabaseClient.from('chat_reportes').insert([
+                    {
+                        reporte_id: String(reporteActivoChat.id),
+                        tabla_origen: reporteActivoChat.tablaOrigen,
+                        mensaje: mensaje,
+                        emisor: 'institucion',
+                        hora: horaAhora
+                    }
+                ]);
+
+                if (error) throw error;
+
+                input.value = '';
+                await cargarMensajesModalAdmin();
+            } catch (err) {
+                alert("Error al enviar mensaje: " + err.message);
+            }
+        }
+
+        function exportarExcel() {
+            if (!datosFiltrados.length) { alert("No hay datos para exportar."); return; }
+            const tabla = document.getElementById('selectBandeja').value;
+            
+            let columnas = ["Código", "Fecha", "Nombre Reporte", "Estado", "Latitud", "Longitud"];
+            let claveCampos = ["codigo", "created_at", "nombre_reporte", "estado", "latitud", "longitud"];
+
+            if (tabla === 'usuarios_registrados') {
+                columnas = ["Fecha Registro", "Nombre Completo", "Correo Electrónico", "Edad", "Barrio de Residencia"];
+                claveCampos = ["created_at", "nombre", "email", "edad", "barrio"];
+            } else if (tabla === 'usuarios_bloqueados') {
+                columnas = ["Fecha de Bloqueo", "Correo Electrónico", "Motivo"];
+                claveCampos = ["created_at", "email", "motivo"];
+            } else if (tabla !== 'reportes_ciudadania') {
+                columnas.push("Municipio");
+                claveCampos.push("municipio");
+            }
+
+            let contenidoCSV = "\uFEFF" + columnas.join(";") + "\n";
+            datosFiltrados.forEach(row => {
+                let fila = claveCampos.map(clave => `"${String(row[clave] || '').replace(/"/g, '""')}"`);
+                contenidoCSV += fila.join(";") + "\n";
+            });
+
+            const blob = new Blob([contenidoCSV], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${tabla}_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('userRole');
+            supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoStan - Tu cuenta</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8f9fa;font-family:system-ui,-apple-system,sans-serif;padding:20px;box-sizing:border-box}
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.06);padding:32px 24px;width:100%;max-width:400px;text-align:center}
+  h2{color:#1b4332;margin:8px 0 10px}p{color:#555;font-size:14px;line-height:1.5}
+  input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;box-sizing:border-box;font-size:15px;margin:6px 0}
+  button{width:100%;padding:13px;border:0;border-radius:8px;background:#1b4332;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}
+  button:disabled{opacity:.6}.ok{color:#1b4332}.err{color:#b91c1c}.ico{font-size:44px}
+  footer{margin-top:18px;font-size:11px;color:#888;text-align:center;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="card" id="caja"><div class="ico">⏳</div><h2>Un momento…</h2><p>Estamos verificando tu enlace.</p></div>
+<footer>© 2026 EcoStan - Territorio Cívico S.A.S. Todos los derechos reservados.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Mismo proyecto de EcoSTAN (la llave publishable es pública por diseño)
+  const db = supabase.createClient('https://afwlonmlxzwkmiumpsyt.supabase.co', 'sb_publishable_8C7CKRVixeJmD9BsnTJQ3A_aVzU-wey');
+  const caja = document.getElementById('caja');
+  const pinta = (ico, titulo, texto, extra = '') => { caja.innerHTML = `<div class="ico">${ico}</div><h2>${titulo}</h2><p>${texto}</p>${extra}`; };
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(location.search);
+  const tipo = hash.get('type') || query.get('type') || '';
+  let mostrado = false;
+
+  const errorEnlace = hash.get('error_description') || query.get('error_description');
+  if (errorEnlace) {
+    mostrado = true;
+    pinta('⚠️', 'Enlace no válido', /expired|invalid/i.test(errorEnlace)
+      ? 'Este enlace ya venció o ya se usó. Vuelve a la app y pide uno nuevo.' : errorEnlace.replace(/\+/g, ' '));
+  }
+
+  function formNuevaClave() {
+    mostrado = true;
+    pinta('🔒', 'Crea tu nueva contraseña', 'Escribe una contraseña de mínimo 8 caracteres.',
+      `<input type="password" id="p1" placeholder="Nueva contraseña" minlength="8">
+       <input type="password" id="p2" placeholder="Repite la contraseña" minlength="8">
+       <button id="bGuardar">Guardar contraseña</button><p id="msg" class="err"></p>`);
+    document.getElementById('bGuardar').onclick = async () => {
+      const a = p1.value, b = p2.value, m = document.getElementById('msg');
+      if (a.length < 8) { m.textContent = 'Mínimo 8 caracteres.'; return; }
+      if (a !== b) { m.textContent = 'Las contraseñas no coinciden.'; return; }
+      bGuardar.disabled = true;
+      const { error } = await db.auth.updateUser({ password: a });
+      if (error) { m.textContent = error.message; bGuardar.disabled = false; return; }
+      await db.auth.signOut();
+      pinta('✅', '¡Contraseña actualizada!', 'Ya puedes volver a la app de EcoStan e iniciar sesión con tu nueva contraseña.');
+    };
+  }
+
+  db.auth.onAuthStateChange((evento) => {
+    if (mostrado) return;
+    if (evento === 'PASSWORD_RECOVERY') formNuevaClave();
+    else if (evento === 'SIGNED_IN' && tipo !== 'recovery') {
+      mostrado = true;
+      pinta('🌱', '¡Cuenta activada!', 'Te damos la bienvenida a EcoStan. Vuelve a la app e inicia sesión para empezar a ganar EcoPuntos.');
+      db.auth.signOut();
+    }
+  });
+
+  // Si el evento ya pasó antes de registrar el listener
+  setTimeout(async () => {
+    if (mostrado) return;
+    const { data } = await db.auth.getSession();
+    if (data.session && tipo === 'recovery') formNuevaClave();
+    else if (data.session) { mostrado = true; pinta('🌱', '¡Cuenta activada!', 'Vuelve a la app e inicia sesión.'); db.auth.signOut(); }
+    else pinta('ℹ️', 'Enlace no reconocido', 'Abre este enlace desde el correo que te enviamos, o pide uno nuevo en la app.');
+  }, 2500);
+</script>
+</body>
+</html>

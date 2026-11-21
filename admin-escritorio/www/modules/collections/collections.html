@@ -1,0 +1,474 @@
+<!--
+  modules/collections/collections.html
+  Menú de tipos de reporte, los 5 formularios, listado y detalle/chat de la solicitud.
+  Fragmento HTML: core/views.js lo inserta en home.html al arrancar.
+  data-slot-destino indica en qué hueco (data-slot) de home.html va cada bloque.
+-->
+<!-- MENÚ CREAR REPORTE -->
+<section id="menu-crear-reporte" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Selecciona el tipo de reporte</h2>
+            <p>Elige la opción que mejor se adapte a tu solicitud</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+    </div>
+
+    <div class="quick-actions-grid" style="grid-template-columns: 1fr; gap: 15px; margin-top: 20px;">
+        <button class="quick-card" onclick="mostrarSeccion('reporte-reciclaje-ciclogo')" style="display: flex; align-items: center; padding: 20px; text-align: left; height: auto;">
+            <div>
+                <h3 style="margin: 0; color: var(--primario);">Entregar a Recicladores</h3>
+                <p style="margin: 5px 0 0 0; color: var(--texto-secundario); font-size: 0.9rem;">Cartón, plástico, ropa, metales o aparatos pequeños: recicladores verificados (CicloGo) pasan por ellos.</p>
+            </div>
+        </button>
+
+            <div>
+                <h3 style="margin: 0; color: var(--primario);">Necesito retirar un residuo</h3>
+                <p style="margin: 5px 0 0 0; color: var(--texto-secundario); font-size: 0.9rem;">Solicita el retiro de muebles, electrodomésticos, escombros, podas, llantas y otros voluminosos.</p>
+            </div>
+        </button>
+
+        <button class="quick-card" onclick="mostrarSeccion('reporte-residuos-abandonados')" style="display: flex; align-items: center; padding: 20px; text-align: left; height: auto;">
+            <div>
+                <h3 style="margin: 0; color: var(--primario);">Reportar problemas de la ciudad</h3>
+                <p style="margin: 5px 0 0 0; color: var(--texto-secundario); font-size: 0.9rem;">Reporta daños viales, luminarias, basuras y otros incidentes urbanos.</p>
+            </div>
+        </button>
+
+        <button class="quick-card" onclick="mostrarSeccion('reporte-violencia-animal')" style="display: flex; align-items: center; padding: 20px; text-align: left; height: auto;">
+            <div>
+                <h3 style="margin: 0; color: var(--primario);">Violencia Animal</h3>
+                <p style="margin: 5px 0 0 0; color: var(--texto-secundario); font-size: 0.9rem;">Reporta casos de maltrato, abandono o emergencia animal.</p>
+            </div>
+        </button>
+
+        <button class="quick-card" onclick="mostrarSeccion('reporte-ciudadania-activa')" style="display: flex; align-items: center; padding: 20px; text-align: left; height: auto;">
+            <div>
+                <h3 style="margin: 0; color: var(--primario);">Ciudadanía Activa</h3>
+                <p style="margin: 5px 0 0 0; color: var(--texto-secundario); font-size: 0.9rem;">Propuestas, participación y veeduría ambiental ciudadana.</p>
+            </div>
+        </button>
+    </div>
+</section>
+
+<!-- FORMULARIO 1: RETIRAR RESIDUO -->
+<section id="reporte-retirar-residuo" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Retirar un residuo</h2>
+            <p>Para cosas grandes, pesadas o rotas que el camión de aseo normal no se lleva.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('menu-crear-reporte')">← Volver</button>
+    </div>
+
+    <form onsubmit="enviarReporteSupabase(event, 'Necesito retirar un residuo')" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Título o Nombre del reporte:</label>
+            <input type="text" id="nombreRetirar" placeholder="Ej: Retirar colchón viejo" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Tipo de residuo:</label>
+            <select id="subtipoRetirar" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Muebles grandes">Muebles grandes (colchones, sofás, camas, armarios, comedores)</option>
+                <option value="Electrodomésticos grandes">Electrodomésticos grandes (neveras, lavadoras, estufas, microondas)</option>
+                <option value="Escombros y materiales">Escombros y materiales (sobrantes de obras, ladrillos, baldosas en bultos)</option>
+                <option value="Podas y ramas">Podas y ramas (cortes de jardín, pasto o ramas de árboles)</option>
+                <option value="Llantas usadas">Llantas usadas (neumáticos de carro o moto)</option>
+                <option value="Basura ordinaria o inservibles rotos">Basura ordinaria o inservibles rotos (trapos viejos, ropa completamente rota, objetos mixtos)</option>
+            </select>
+            <small style="color: var(--texto-secundario); display: block; margin-top: 4px;">¿Cartón, plástico, ropa en buen estado, metales o aparatos pequeños? Usa la opción "Entregar a Recicladores".</small>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Ubicación exacta:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button type="button" class="secondary-btn" onclick="obtenerUbicacionActual('retirar')" style="flex: 1; padding: 8px;">📍 Enviar mi ubicación actual</button>
+                <button type="button" class="secondary-btn" onclick="activarSeleccionManual('retirar')" style="flex: 1; padding: 8px;">🗺️ Seleccionar otra ubicación</button>
+            </div>
+            <div id="mapaRetirarGPS" style="height: 220px; width: 100%; border-radius: 8px; border: 1px solid var(--borde); margin-bottom: 5px;"></div>
+            <small id="txtGpsRetirar" style="color: var(--texto-secundario); display: block;">Mueve el marcador en el mapa o usa tu GPS.</small>
+            <small id="txtMunicipioRetirar" style="color: var(--texto-secundario); display: block;">El municipio se detecta automáticamente con la ubicación.</small>
+            <input type="hidden" id="latRetirar">
+            <input type="hidden" id="lngRetirar">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Evidencia Fotográfica:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 6px;">
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoRetirarCamara').click()" style="flex: 1; padding: 8px;">📷 Tomar foto</button>
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoRetirar').click()" style="flex: 1; padding: 8px;">🖼️ Elegir de galería</button>
+            </div>
+            <input type="file" id="fotoRetirarCamara" accept="image/*" capture="environment" style="display: none;" onchange="mostrarFotoSeleccionada('Retirar', 'camara')">
+            <input type="file" id="fotoRetirar" accept="image/*" style="display: none;" onchange="mostrarFotoSeleccionada('Retirar', 'galeria')">
+            <small id="txtFotoRetirar" style="color: var(--texto-secundario); display: block;">Ninguna foto seleccionada.</small>
+        </div>
+
+        <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Enviar Solicitud de Retiro</button>
+    </form>
+</section>
+
+<!-- FORMULARIO: ENTREGAR A RECICLADORES (CICLOGO) -->
+<section id="reporte-reciclaje-ciclogo" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Entregar a recicladores</h2>
+            <p>Publica lo que quieres entregar y un reciclador verificado de CicloGo pasará por él. Es gratuito.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('menu-crear-reporte')">← Volver</button>
+    </div>
+
+    <form onsubmit="enviarReporteSupabase(event, 'Entregar a Recicladores')" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">¿Qué vas a entregar?</label>
+            <select id="subtipoReciclaje" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Materiales reciclables">Materiales reciclables (cartón, botellas de plástico, latas, papel, vidrio limpio)</option>
+                <option value="Ropa, zapatos y telas">Ropa, zapatos y telas (ropa en buen estado, cobijas o calzado que aún sirva)</option>
+                <option value="Pequeños aparatos o cables">Pequeños aparatos o cables (cables viejos, radios pequeños, celulares dañados, licuadoras)</option>
+                <option value="Metales u ollas viejas">Metales u ollas viejas (sartenes, pedazos de metal u objetos pequeños de hierro o cobre)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Cantidad aproximada:</label>
+            <select id="cantidadReciclaje" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Una bolsa o caja pequeña">Una bolsa o caja pequeña</option>
+                <option value="Varias bolsas o cajas">Varias bolsas o cajas</option>
+                <option value="Un costal o bulto grande">Un costal o bulto grande</option>
+                <option value="Más de un bulto (carga grande)">Más de un bulto (carga grande)</option>
+            </select>
+        </div>
+
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">¿Cuándo pueden pasar a recogerlo?</label>
+            <select id="franjaReciclaje" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Cualquier horario">Cualquier horario</option>
+                <option value="Mañana (6 a. m. a 12 m.)">Mañana (6 a. m. a 12 m.)</option>
+                <option value="Tarde (12 m. a 6 p. m.)">Tarde (12 m. a 6 p. m.)</option>
+                <option value="Solo fines de semana y festivos">Solo fines de semana y festivos</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Dirección y referencias para llegar:</label>
+            <input type="text" id="lugarReciclaje" placeholder="Ej: Calle 45 #12-30, torre B, portería" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Ubicación exacta:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button type="button" class="secondary-btn" onclick="obtenerUbicacionActual('reciclaje')" style="flex: 1; padding: 8px;">📍 Enviar mi ubicación actual</button>
+                <button type="button" class="secondary-btn" onclick="activarSeleccionManual('reciclaje')" style="flex: 1; padding: 8px;">🗺️ Seleccionar otra ubicación</button>
+            </div>
+            <div id="mapaReciclajeGPS" style="height: 220px; width: 100%; border-radius: 8px; border: 1px solid var(--borde); margin-bottom: 5px;"></div>
+            <small id="txtGpsReciclaje" style="color: var(--texto-secundario); display: block;">Mueve el marcador en el mapa o usa tu GPS.</small>
+            <small id="txtMunicipioReciclaje" style="color: var(--texto-secundario); display: block;">El municipio se detecta automáticamente con la ubicación.</small>
+            <input type="hidden" id="latReciclaje">
+            <input type="hidden" id="lngReciclaje">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Foto del material (el reciclador la ve):</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 6px;">
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoReciclajeCamara').click()" style="flex: 1; padding: 8px;">📷 Tomar foto</button>
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoReciclaje').click()" style="flex: 1; padding: 8px;">🖼️ Elegir de galería</button>
+            </div>
+            <input type="file" id="fotoReciclajeCamara" accept="image/*" capture="environment" style="display: none;" onchange="mostrarFotoSeleccionada('Reciclaje', 'camara')">
+            <input type="file" id="fotoReciclaje" accept="image/*" style="display: none;" onchange="mostrarFotoSeleccionada('Reciclaje', 'galeria')">
+            <small id="txtFotoReciclaje" style="color: var(--texto-secundario); display: block;">Ninguna foto seleccionada.</small>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; color: var(--texto-secundario);">
+                <input type="checkbox" id="materialLimpioReciclaje" required style="margin-top: 3px;">
+                <span>Confirmo que el material está limpio, seco y separado.</span>
+            </label>
+        </div>
+
+        <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Publicar para recicladores</button>
+    </form>
+</section>
+
+<!-- FORMULARIO 2: RESIDUOS ABANDONADOS -->
+<section id="reporte-residuos-abandonados" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Reportar problemas de la ciudad</h2>
+            <p>Reporta acumulación indebida en espacios públicos.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('menu-crear-reporte')">← Volver</button>
+    </div>
+
+    <form onsubmit="enviarReporteSupabase(event, 'Reportar problemas de la ciudad')" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Título o Nombre del reporte:</label>
+            <input type="text" id="nombreAbandonados" placeholder="Ej: Basura acumulada en esquina" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Tipo de afectación:</label>
+            <select id="subtipoAbandonados" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Basuras y residuos">Basura o residuos acumulados</option>
+                <option value="Animal muerto">Animal muerto en vía pública</option>
+                <option value="Vías y calles">Huecos y daños en la vía</option>
+                <option value="Semáforos y señalización">Semáforos y señales dañadas</option>
+                <option value="Alumbrado público">Postes o luminarias sin luz</option>
+                <option value="Andenes y accesibilidad">Andenes rotos o bloqueados</option>
+                <option value="Árboles y zonas verdes">Árboles o ramas en riesgo</option>
+                <option value="Alcantarillado y drenaje">Alcantarillas o sumideros tapados</option>
+                <option value="Parques y espacio público">Mobiliario de parques deteriorado</option>
+                <option value="Riesgos en la vía pública">Cables caídos u objetos peligrosos</option>
+                <option value="Movilidad y transporte">Daños en paraderos o ciclorrutas</option>
+                <option value="Otro problema">Otro problema no listado</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Lugar (Dirección o referencia):</label>
+            <input type="text" id="lugarAbandonados" placeholder="Ej: Carrera 33 con Calle 52" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Cuándo ocurre:</label>
+            <select id="cuandoAbandonados" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Todo el día (de forma permanente)">Todo el día (de forma permanente)</option>
+                <option value="Madrugada (12 a. m. a 6 a. m.)">Madrugada (12 a. m. a 6 a. m.)</option>
+                <option value="Mañana (6 a. m. a 12 m.)">Mañana (6 a. m. a 12 m.)</option>
+                <option value="Tarde (12 m. a 6 p. m.)">Tarde (12 m. a 6 p. m.)</option>
+                <option value="Noche (6 p. m. a 12 a. m.)">Noche (6 p. m. a 12 a. m.)</option>
+                <option value="Solo fines de semana y festivos">Solo fines de semana y festivos</option>
+                <option value="Sin horario definido">Sin horario definido</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">¿Es un problema recurrente?:</label>
+            <select id="recurrenteAbandonados" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="No">No</option>
+                <option value="Sí">Sí</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Ubicación exacta en mapa:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button type="button" class="secondary-btn" onclick="obtenerUbicacionActual('abandonados')" style="flex: 1; padding: 8px;">📍 Enviar mi ubicación actual</button>
+                <button type="button" class="secondary-btn" onclick="activarSeleccionManual('abandonados')" style="flex: 1; padding: 8px;">🗺️ Seleccionar otra ubicación</button>
+            </div>
+            <div id="mapaAbandonadosGPS" style="height: 220px; width: 100%; border-radius: 8px; border: 1px solid var(--borde); margin-bottom: 5px;"></div>
+            <small id="txtGpsAbandonados" style="color: var(--texto-secundario); display: block;">Mueve el marcador o usa tu GPS.</small>
+            <small id="txtMunicipioAbandonados" style="color: var(--texto-secundario); display: block;">El municipio se detecta automáticamente con la ubicación.</small>
+            <input type="hidden" id="latAbandonados">
+            <input type="hidden" id="lngAbandonados">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Evidencia Fotográfica:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 6px;">
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoAbandonadosCamara').click()" style="flex: 1; padding: 8px;">📷 Tomar foto</button>
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoAbandonados').click()" style="flex: 1; padding: 8px;">🖼️ Elegir de galería</button>
+            </div>
+            <input type="file" id="fotoAbandonadosCamara" accept="image/*" capture="environment" style="display: none;" onchange="mostrarFotoSeleccionada('Abandonados', 'camara')">
+            <input type="file" id="fotoAbandonados" accept="image/*" style="display: none;" onchange="mostrarFotoSeleccionada('Abandonados', 'galeria')">
+            <small id="txtFotoAbandonados" style="color: var(--texto-secundario); display: block;">Ninguna foto seleccionada.</small>
+        </div>
+
+        <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Enviar Reporte de Abandono</button>
+    </form>
+</section>
+
+<!-- FORMULARIO NUEVO: VIOLENCIA ANIMAL -->
+<section id="reporte-violencia-animal" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Violencia Animal</h2>
+            <p>Reporta casos de maltrato o emergencia animal.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('menu-crear-reporte')">← Volver</button>
+    </div>
+
+    <form onsubmit="enviarReporteSupabase(event, 'Violencia Animal')" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Título o Nombre del reporte:</label>
+            <input type="text" id="nombreViolenciaAnimal" placeholder="Ej: Perro amarrado sin agua ni alimento" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Tipo de situación:</label>
+            <select id="subtipoViolenciaAnimal" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Maltrato físico">Maltrato físico o agresión</option>
+                <option value="Abandono">Abandono en vía pública o inmueble</option>
+                <option value="Desnutrición extrema">Falta de alimento / Desnutrición severa</option>
+                <option value="Animal herido o atropellado">Animal herido o atropellado</option>
+                <option value="Encierro prolongado">Encierro prolongado sin condiciones</option>
+                <option value="Otro caso de maltrato">Otro caso de violencia animal</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Lugar (Dirección o referencia):</label>
+            <input type="text" id="lugarViolenciaAnimal" placeholder="Ej: Calle 45 con Cra 20, Barrio..." required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Detalles de la situación:</label>
+            <textarea id="detalleViolenciaAnimal" rows="3" placeholder="Describe brevemente lo que sucede..." required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);"></textarea>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Ubicación exacta en mapa:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button type="button" class="secondary-btn" onclick="obtenerUbicacionActual('violenciaAnimal')" style="flex: 1; padding: 8px;">📍 Enviar mi ubicación actual</button>
+                <button type="button" class="secondary-btn" onclick="activarSeleccionManual('violenciaAnimal')" style="flex: 1; padding: 8px;">🗺️ Seleccionar otra ubicación</button>
+            </div>
+            <div id="mapaViolenciaAnimalGPS" style="height: 220px; width: 100%; border-radius: 8px; border: 1px solid var(--borde); margin-bottom: 5px;"></div>
+            <small id="txtGpsViolenciaAnimal" style="color: var(--texto-secundario); display: block;">Mueve el marcador o usa tu GPS.</small>
+            <small id="txtMunicipioViolenciaAnimal" style="color: var(--texto-secundario); display: block;">El municipio se detecta automáticamente con la ubicación.</small>
+            <input type="hidden" id="latViolenciaAnimal">
+            <input type="hidden" id="lngViolenciaAnimal">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Evidencia Fotográfica:</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 6px;">
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoViolenciaAnimalCamara').click()" style="flex: 1; padding: 8px;">📷 Tomar foto</button>
+                <button type="button" class="secondary-btn" onclick="document.getElementById('fotoViolenciaAnimal').click()" style="flex: 1; padding: 8px;">🖼️ Elegir de galería</button>
+            </div>
+            <input type="file" id="fotoViolenciaAnimalCamara" accept="image/*" capture="environment" style="display: none;" onchange="mostrarFotoSeleccionada('ViolenciaAnimal', 'camara')">
+            <input type="file" id="fotoViolenciaAnimal" accept="image/*" style="display: none;" onchange="mostrarFotoSeleccionada('ViolenciaAnimal', 'galeria')">
+            <small id="txtFotoViolenciaAnimal" style="color: var(--texto-secundario); display: block;">Ninguna foto seleccionada.</small>
+        </div>
+
+        <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Enviar Reporte de Violencia Animal</button>
+    </form>
+</section>
+
+<!-- FORMULARIO 3: CIUDADANÍA ACTIVA -->
+<section id="reporte-ciudadania-activa" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Ciudadanía Activa</h2>
+            <p>Propuestas y participación comunitaria.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('menu-crear-reporte')">← Volver</button>
+    </div>
+
+    <form onsubmit="enviarReporteSupabase(event, 'Ciudadanía Activa')" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Título o Nombre de la propuesta:</label>
+            <input type="text" id="nombreCiudadania" placeholder="Ej: Jornada de limpieza comunitaria" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Tipo de propuesta:</label>
+            <select id="subtipoCiudadania" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                <option value="">Seleccione...</option>
+                <option value="Proponer una idea">Proponer una idea</option>
+                <option value="Mejorar mi barrio">Mejorar mi barrio</option>
+                <option value="Propuesta ambiental">Propuesta ambiental</option>
+                <option value="Propuesta de movilidad">Propuesta de movilidad</option>
+                <option value="Propuesta de accesibilidad">Propuesta de accesibilidad</option>
+                <option value="Otra sugerencia">Otra sugerencia</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Detalle de la propuesta:</label>
+            <textarea id="detalleCiudadania" rows="4" placeholder="Describe tu iniciativa o propuesta..." required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);"></textarea>
+        </div>
+
+        <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Enviar Propuesta Ciudadana</button>
+    </form>
+</section>
+
+<!-- MIS REPORTES -->
+<section id="mis-reportes" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2>Reportes generales</h2>
+            <p>Problemas informados por la comunidad.</p>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+    </div>
+
+    <div id="listaReportes">
+        <div class="empty">
+            <div>📋</div>
+            <h3>No hay reportes registrados todavía</h3>
+        </div>
+    </div>
+</section>
+
+<!-- VISTA DETALLE DE LA SOLICITUD Y CHAT DE SEGUIMIENTO -->
+<section id="detalle-solicitud" class="seccion" data-slot-destino="secciones">
+    <div class="section-title">
+        <div>
+            <h2 id="detTituloHeader">Solicitud</h2>
+        </div>
+        <button class="secondary-btn" onclick="volverAtras('mis-reportes')">← Volver</button>
+    </div>
+
+    <div class="solicitud-tabs">
+        <button id="tabBtnDetalle" class="solicitud-tab-btn activo" onclick="cambiarPestanaSolicitud('detalle')">Detalle</button>
+        <button id="tabBtnChat" class="solicitud-tab-btn" onclick="cambiarPestanaSolicitud('chat')">Chat</button>
+    </div>
+
+    <!-- PESTAÑA 1: DETALLE DE LA SOLICITUD -->
+    <div id="tabDetalleContent" class="solicitud-tab-content activo">
+        <div id="mapaDetalleSolicitud" style="height: 200px; width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--borde);"></div>
+
+        <div class="solicitud-card-info">
+            <p class="solicitud-direccion" id="detDireccion">Cargando dirección...</p>
+
+            <div class="solicitud-meta-row">
+                <span class="solicitud-status-badge" id="detEstado">✓ En progreso</span>
+                <span class="solicitud-creador-badge">👥 Creada por otros</span>
+            </div>
+
+            <h3 class="solicitud-nombre-titulo" id="detNombre">Cargando nombre del reporte...</h3>
+            <p class="solicitud-referencia" id="detReferencia">Referencia del aviso: #000000</p>
+
+            <div class="solicitud-categoria-tag">
+                <span class="cat-ico">🧹</span>
+                <span id="detCategoria">Limpieza de calles</span>
+            </div>
+
+            <button type="button" class="btn-apoyar-solicitud" id="btnApoyar" onclick="apoyarSolicitudActual()">
+                <span class="apoyar-ico">📄</span>
+                <span id="lblApoyar"><span id="lblApoyarTexto">Apoyar solicitud</span> (<span id="numApoyos">0</span>)</span>
+            </button>
+
+            <div id="contenedorFotoAdjunta" style="margin-top: 15px; display: none;">
+                <h4 style="font-size: 0.85rem; color: var(--primario); margin-bottom: 6px;">Evidencia fotográfica adjuntada:</h4>
+                <img id="imgEvidenciaReporte" src="" alt="Foto de la incidencia" style="width: 100%; max-height: 250px; object-fit: cover; border-radius: 10px; border: 1px solid var(--borde);">
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--borde); margin: 15px 0;">
+
+            <p class="solicitud-fecha-label">Fecha de creación</p>
+            <p class="solicitud-fecha-valor" id="detFechaCreacion">---</p>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 2: CHAT DE SEGUIMIENTO -->
+    <div id="tabChatContent" class="solicitud-tab-content">
+        <div class="chat-fecha-header">
+            <span id="chatFechaBadge">08-10-2026</span>
+        </div>
+
+        <div id="chatMensajesList" class="chat-mensajes-container"></div>
+
+        <div class="chat-input-bar">
+            <input type="text" id="inputChatMensaje" placeholder="Escribe un mensaje al personal..." onkeypress="if(event.key === 'Enter') enviarMensajeChat()">
+            <button type="button" class="btn-chat-send" onclick="enviarMensajeChat()">➤</button>
+        </div>
+    </div>
+</section>

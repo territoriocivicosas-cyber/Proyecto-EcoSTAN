@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Administrativo - EcoSTAN</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --verde-gobierno: #1b4332;
+            --verde-suave: #2d6a4f;
+            --fondo-gris: #f4f6f8;
+        }
+
+        body {
+            background: var(--fondo-gris);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .auth-card {
+            background: #fff;
+            padding: 35px 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--verde-gobierno);
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #222;
+            font-size: 13px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .btn-primary-custom {
+            width: 100%;
+            padding: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            border: none;
+            background: var(--verde-gobierno);
+            color: #fff;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        .btn-primary-custom:hover {
+            background: var(--verde-suave);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <h2>Panel de Gestión - EcoSTAN</h2>
+        <p class="subtitle">Acceso exclusivo para Alcaldía y Empresas Operadoras</p>
+        
+        <form onsubmit="ejecutarLoginAdmin(event)">
+            <div class="form-group">
+                <label>Correo Institucional</label>
+                <input type="email" id="adminEmail" class="form-control" placeholder="usuario@ecostan.com" required>
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="adminPassword" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" id="btnAdminLogin" class="btn-primary-custom">Ingresar al Panel</button>
+        </form>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        async function ejecutarLoginAdmin(e) {
+            e.preventDefault();
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const btn = document.getElementById('btnAdminLogin');
+
+            const cliente = window.supabaseClient || supabaseClient;
+            if (!cliente) {
+                alert("Error de conexión con Supabase.");
+                return;
+            }
+
+            btn.disabled = true;
+
+            try {
+                // 1. Validar autenticación
+                const { data: authData, error: authError } = await cliente.auth.signInWithPassword({ email, password });
+
+                if (authError || !authData || !authData.user) {
+                    alert("Acceso denegado: Credenciales incorrectas.");
+                    return;
+                }
+
+                // 2. Validar perfil y permisos en la tabla profiles
+                const { data: profileData, error: profileError } = await cliente
+                    .from('profiles')
+                    .select('rol, dependencia')
+                    .eq('id', authData.user.id)
+                    .single();
+
+                if (profileError || !profileData) {
+                    await cliente.auth.signOut();
+                    alert("Tu usuario no está autorizado como administrador.");
+                    return;
+                }
+
+                // 3. Guardar rol y dependencia y redirigir
+                localStorage.setItem('userRole', profileData.rol || '');
+                localStorage.setItem('userDependencia', profileData.dependencia || '');
+
+                window.location.href = 'admin.html';
+            } catch (err) {
+                console.error(err);
+                alert("Error inesperado en el inicio de sesión.");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

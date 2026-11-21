@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciudad Limpia - Bucaramanga</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="modules/banners/banners.css">
+    <link rel="stylesheet" href="modules/map_routing/map.css">
+    <link rel="stylesheet" href="modules/collections/collections.css">
+    <link rel="stylesheet" href="modules/education/education.css">
+    <link rel="stylesheet" href="modules/rewards/rewards.css">
+
+    <!-- Estilos y Script del Mapa Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Plugin para agrupar reportes cercanos -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- Librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* ===== Tour de bienvenida ===== */
+        .tour-card{padding:0;overflow:hidden}
+        .tour-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+        .tour-track::-webkit-scrollbar{display:none}
+        .tour-slide{flex:0 0 100%;scroll-snap-align:center;padding:0 18px 6px;box-sizing:border-box;text-align:center}
+        .tour-img{margin:0 -18px 14px;background:#fff}
+        .tour-img img{display:block;width:100%;height:auto;aspect-ratio:1.28/1;object-fit:cover}
+        .tour-slide h3{color:#1b4332;font-size:1.35rem;line-height:1.2;margin:4px 0 6px;font-weight:800}
+        .tour-slide h4{color:#2d6a4f;font-size:.98rem;line-height:1.3;margin:0 0 12px;font-weight:600}
+        .tour-box{background:rgba(216,243,220,.55);border-radius:14px;padding:12px 14px;text-align:left;font-size:.93rem;line-height:1.5;color:#1a1a1a}
+        .tour-box p{margin:0 0 8px}.tour-box p:last-child{margin-bottom:0}
+        .tour-box ul{margin:0;padding-left:18px}.tour-box li{margin-bottom:4px}
+        .tour-dots{display:flex;justify-content:center;gap:9px;margin:14px 0 4px}
+        .tour-dots span{width:10px;height:10px;border-radius:50%;background:#cfd8d3;transition:all .2s}
+        .tour-dots span.on{background:#1b4332;transform:scale(1.25)}
+        .tour-btn{display:block;width:calc(100% - 36px);margin:10px 18px 18px;padding:14px;border:0;border-radius:30px;background:#1b4332;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;letter-spacing:.3px;box-shadow:0 4px 12px rgba(27,67,50,.25)}
+        /* ===== Textos legales ===== */
+        .info-legal h2.legal-h2{color:#1b4332;font-size:1.05rem;margin:22px 0 4px;padding-top:14px;border-top:2px solid #d8f3dc}
+        .info-legal h3{color:#1b4332;font-size:1rem;margin:18px 0 6px}
+        .info-legal h4{color:#2d6a4f;font-size:.92rem;margin:14px 0 4px}
+        .info-legal .legal-meta{background:#f1f8f3;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.84rem}
+        .info-legal .legal-meta p{margin:2px 0}
+        .info-legal ul,.info-legal ol{padding-left:20px}.info-legal li{margin-bottom:6px}
+        .legal-tabla-wrap{overflow-x:auto;margin:8px 0}
+        .legal-tabla{width:100%;border-collapse:collapse;font-size:.85rem}
+        .legal-tabla th{background:#1b4332;color:#fff;text-align:left;padding:8px}
+        .legal-tabla td{border-bottom:1px solid #e3e8e5;padding:8px}
+        .legal-aviso{font-size:.82rem;color:#666;margin-top:18px}
+
+        .btn-apoyar-solicitud:disabled {
+            opacity: 0.75;
+            cursor: default;
+        }
+        .section-title {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+        .section-title .secondary-btn {
+            flex-shrink: 0;
+            margin-right: 0;
+        }
+        .section-title > div {
+            flex-grow: 1;
+        }
+
+        /* Textos legales (privacidad, términos y diagnóstico) */
+        .info-legal { text-align: left; line-height: 1.6; font-size: 14px; }
+        .info-legal h3 { margin: 18px 0 6px 0; color: var(--primario); font-size: 15px; }
+        .info-legal p, .info-legal ul { margin: 0 0 10px 0; }
+        .info-legal ul { padding-left: 20px; }
+    </style>
+</head>
+
+<body>
+
+    <!-- MODAL DE POLÍTICAS (PRIMERA VEZ) -->
+    <div id="modalPoliticas" class="modal-politicas" style="display: none;">
+        <div class="modal-politicas-contenido">
+            <h3>Políticas de Uso y Privacidad</h3>
+            <p>Bienvenido a Ciudad Limpia. Para continuar utilizando nuestra plataforma y reportar incidencias, debes aceptar nuestras políticas de tratamiento de datos y términos de servicio.</p>
+            <div class="modal-botones">
+                <button type="button" class="primary-btn" onclick="aceptarPoliticasPrimeraVez()">Aceptar y continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENÚ / PERFIL (PANTALLA COMPLETA) -->
+    <div id="menuPagina" class="menu-pagina" aria-hidden="true">
+        <div class="menu-contenedor">
+            <div class="menu-top">
+                <button class="menu-cerrar" onclick="cerrarMenu()" aria-label="Cerrar menú">✕</button>
+                <div id="headerPerfilBox" class="perfil-usuario-box" onclick="manejarClickHeaderPerfil()" style="cursor: pointer;">
+                    <span id="menuNombreUsuario" class="menu-login-label">Iniciar sesión</span>
+                </div>
+            </div>
+
+            <div class="menu-cuerpo" id="menuCuerpoDinamico">
+                <div id="seccionCuentaDinamica">
+                    <button class="menu-item" onclick="intentarAccesoPerfil('datos-personales')">
+                        <span class="menu-ico">👤</span><span class="menu-txt">Datos personales</span><span class="menu-flecha">›</span>
+                    </button>
+                    <button class="menu-item" onclick="intentarAccesoPerfil('cambiar-password')">
+                        <span class="menu-ico">🔑</span><span class="menu-txt">Cambiar contraseña</span><span class="menu-flecha">›</span>
+                    </button>
+                </div>
+
+                <hr class="menu-sep">
+
+                <h3 class="menu-grupo">Ayuda</h3>
+                <button class="menu-item" onclick="abrirInfo('tour')">
+                    <span class="menu-ico">🚩</span><span class="menu-txt">Ver tour de bienvenida</span><span class="menu-flecha">›</span>
+                </button>
+                <button class="menu-item" onclick="abrirInfo('faqs')">
+                    <span class="menu-ico">❓</span><span class="menu-txt">Preguntas frecuentes</span><span class="menu-flecha">›</span>
+                </button>
+                <button class="menu-item" onclick="abrirInfo('soporte')">
+                    <span class="menu-ico">⚠️</span><span class="menu-txt">¿La app no te funciona bien?</span><span class="menu-flecha">›</span>
+                </button>
+
+                <hr class="menu-sep">
+
+                <h3 class="menu-grupo">Comunicación</h3>
+                <button class="menu-item" onclick="compartirApp()">
+                    <span class="menu-ico">🔗</span><span class="menu-txt">Compartir</span><span class="menu-flecha">›</span>
+                </button>
+
+                <hr class="menu-sep">
+
+                <h3 class="menu-grupo">Legal</h3>
+                <button class="menu-item" onclick="abrirInfo('diagnostico')">
+                    <span class="menu-ico">📊</span><span class="menu-txt">Datos de uso y diagnóstico</span><span class="menu-flecha">›</span>
+                </button>
+                <button class="menu-item" onclick="abrirInfo('privacidad')">
+                    <span class="menu-ico">🛡️</span><span class="menu-txt">Política de privacidad</span><span class="menu-flecha">›</span>
+                </button>
+                <button class="menu-item" onclick="abrirInfo('terminos')">
+                    <span class="menu-ico">📄</span><span class="menu-txt">Términos y condiciones</span><span class="menu-flecha">›</span>
+                </button>
+                <button class="menu-item" onclick="abrirInfo('terminos-ciclogo')">
+                    <span class="menu-ico">♻️</span><span class="menu-txt">Términos de CicloGo (recicladores y comercios)</span><span class="menu-flecha">›</span>
+                </button>
+
+                <hr class="menu-sep">
+
+                <button class="menu-item" onclick="window.location.href='admin-login.html'">
+                    <span class="menu-ico">⚙️</span><span class="menu-txt">Acceso Administrativo</span><span class="menu-flecha">›</span>
+                </button>
+
+                <hr class="menu-sep" id="separadorCierreSesion" style="display: none;">
+
+                <button id="botonCerrarSesionDinamico" class="menu-item btn-cerrar-sesion" onclick="cerrarSesionApp()" style="display: none;">
+                    <span class="menu-ico">🚪</span><span class="menu-txt"><strong>Cerrar sesión</strong></span>
+                </button>
+
+                <p class="menu-version">Versión 1.0.0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-single">
+
+        <header class="topbar-single">
+            <div class="user-profile">
+                <button class="icon-btn" onclick="abrirMenu()" title="Menú de opciones">☰</button>
+                <div class="app-title-wrap">
+                    <h1 id="tituloPagina">Ciudad Limpia</h1>
+                    <small>Area Metropolitana</small>
+                </div>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="icon-btn btn-campana" onclick="abrirCampana()" title="Novedades y alertas">🔔<span id="badgeCampana" class="badge-campana" style="display: none;">0</span></button>
+                <button class="icon-btn" onclick="mostrarSeccion('mis-reportes')" title="Reportes generales">📢</button>
+            </div>
+        </header>
+
+        <!-- INICIO -->
+        <section id="inicio" class="seccion activa">
+            <div data-slot="inicio-banners"></div>
+
+            <div class="section-title">
+                <div>
+                    <h2>Gestión Ciudadana</h2>
+                    <p>Selecciona una opción para continuar</p>
+                </div>
+            </div>
+
+            <div class="quick-actions-grid">
+                <button class="quick-card" onclick="mostrarSeccion('rutas', this)">
+                    <span class="qc-icon">🚛</span>
+                    <span class="qc-label">Rutas de recolección</span>
+                </button>
+
+                <button class="quick-card" onclick="mostrarSeccion('avisos', this)">
+                    <span class="qc-icon">🔔</span>
+                    <span class="qc-label">Avisos</span>
+                </button>
+
+                <button class="quick-card" onclick="mostrarSeccion('educacion', this)">
+                    <span class="qc-icon">🌱</span>
+                    <span class="qc-label">Educación ambiental</span>
+                </button>
+
+                <button class="quick-card" onclick="intentarCrearReporte()">
+                    <span class="qc-icon">📝</span>
+                    <span class="qc-label">Crear Reporte</span>
+                </button>
+            </div>
+
+            <div class="section-title" style="margin-top: 30px;">
+                <div>
+                    <h2>Acción Ambiental</h2>
+                </div>
+            </div>
+
+            <!-- Se llena desde modules/education/education.js (EcoPuntos, kilos e impacto) -->
+            <div id="accionAmbiental" class="aa-wrap"><p class="aviso-vacio">Cargando tu impacto…</p></div>
+
+            <div data-slot="inicio-mapa"></div>
+        </section>
+
+        <!-- Las pantallas de los módulos (reportes, rutas, avisos, educación) se insertan aquí: ver core/views.js -->
+        <div data-slot="secciones" data-slot-multiple></div>
+
+
+
+
+
+
+
+
+
+        <!-- DATOS PERSONALES -->
+        <section id="perfil-datos-personales" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Datos Personales</h2>
+                    <p>Actualiza tu información básica.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+
+            <form id="formDatosPersonales" onsubmit="guardarDatosPersonales(event)" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Nombre Completo:</label>
+                    <input type="text" id="perfilNombre" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Edad:</label>
+                    <input type="number" id="perfilEdad" min="1" max="120" placeholder="Ej: 28" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Municipio donde reside:</label>
+                    <select id="perfilMunicipio" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde); background: #fff;">
+                        <option value="">Selecciona tu municipio</option>
+                        <option value="Bucaramanga">Bucaramanga</option>
+                        <option value="Floridablanca">Floridablanca</option>
+                        <option value="Girón">Girón</option>
+                        <option value="Piedecuesta">Piedecuesta</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Nombre del barrio donde reside:</label>
+                    <input type="text" id="perfilBarrio" placeholder="Ej: Cabecera del Llano, Sotomayor..." required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                </div>
+
+                <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Guardar Cambios</button>
+            </form>
+        </section>
+
+        <!-- CAMBIAR CONTRASEÑA -->
+        <section id="perfil-cambiar-password" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Cambiar Contraseña</h2>
+                    <p>Modifica tu clave de acceso segura.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+
+            <form id="formCambiarPassword" onsubmit="actualizarPassword(event)" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--primario);">Nueva Contraseña:</label>
+                    <input type="password" id="nuevoPassword" placeholder="Mínimo 6 caracteres" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde);">
+                </div>
+
+                <button type="submit" class="primary-btn" style="width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Actualizar Contraseña</button>
+            </form>
+        </section>
+
+
+
+
+        <!-- INFORMACIÓN GENERAL -->
+        <section id="info-tour" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Tour de bienvenida</h2>
+                    <p>Conoce cómo usar Ciudad Limpia.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card tour-card" id="contenido-tour"><div class="tour" id="tourApp"><div class="tour-track" id="tourTrack"><article class="tour-slide" data-i="0"><div class="tour-img"><img src="img/tour/tour-1-bienvenida.jpg" alt="Bienvenida a EcoSTAN: paisaje de Bucaramanga con el puente" loading="eager"></div><h3>¡Bienvenido a EcoSTAN!</h3><h4>Tu app de Gestión Ciudadana y Ambiental.</h4><div class="tour-box"><p>Al usar esta app de Territorio Cívico S.A.S., transformamos juntos nuestra ciudad. Protegemos tus datos (Ley 1581, Habeas Data) y operamos bajo principios de buena fe y convivencia.</p><p><strong>¡Aprende cómo en solo 1 minuto!</strong></p></div></article><article class="tour-slide" data-i="1"><div class="tour-img"><img src="img/tour/tour-2-avisos.jpg" alt="Banners comerciales y avisos institucionales" loading="lazy"></div><h3>Publicidad, alertas y avisos institucionales</h3><h4>Todo lo importante, en la parte superior.</h4><div class="tour-box"><p>En la parte superior de tu pantalla principal encontrarás:</p><ul><li><strong>Banners comerciales:</strong> promociones y campañas de nuestros aliados comerciales.</li><li><strong>Avisos:</strong> notificaciones y alertas operativas importantes para estar al día en el Área Metropolitana.</li></ul></div></article><article class="tour-slide" data-i="2"><div class="tour-img"><img src="img/tour/tour-3-rutas.jpg" alt="Camión recolector y mapas de rutas" loading="lazy"></div><h3>Consulta de rutas y gestión de residuos</h3><h4>Nunca más pierdas el carro recolector.</h4><div class="tour-box"><p>Consulta fácilmente los <strong>mapas y horarios de las rutas de aseo en tu zona</strong> para mantener las calles limpias y organizadas.</p></div></article><article class="tour-slide" data-i="3"><div class="tour-img"><img src="img/tour/tour-4-reportes.jpg" alt="Cinco categorías de reporte" loading="lazy"></div><h3>Crea reportes en segundos</h3><h4>¿Viste un problema? Entra a «Crear reporte» y elige entre 5 categorías:</h4><div class="tour-box"><ul><li><strong>Entregar a recicladores</strong> (con CicloGo).</li><li><strong>Retirar</strong> residuos voluminosos y escombros.</li><li><strong>Reportar daños</strong> urbanos o luminarias.</li><li><strong>Casos de violencia</strong> y bienestar animal.</li><li><strong>Ciudadanía activa</strong> y propuestas.</li></ul></div></article><article class="tour-slide" data-i="4"><div class="tour-img"><img src="img/tour/tour-5-reciclar.jpg" alt="EcoPuntos, trivias y Eco-Academia" loading="lazy"></div><h3>¡Reciclar y aprender tiene premio!</h3><h4>Eco-Academia, trivias y tu material reciclable.</h4><div class="tour-box"><p>Participa en la Eco-Academia, responde trivias diarias y entrega tu material reciclable.</p><p>Acumula <strong>EcoPuntos</strong> (1 punto = $10 COP como referencia) y cámbialos por beneficios en nuestros comercios aliados.</p></div></article><article class="tour-slide" data-i="5"><div class="tour-img"><img src="img/tour/tour-6-mapa.jpg" alt="Mapa de impacto en vivo" loading="lazy"></div><h3>Unidos por el cambio: impacto metropolitano</h3><h4>Explora el Visor de Mapa General.</h4><div class="tour-box"><p>Un espacio en tiempo real donde puedes ver todos los reportes e iniciativas que la comunidad está realizando en <strong>Bucaramanga, Floridablanca, Girón y Piedecuesta</strong>.</p></div></article></div><div class="tour-dots" id="tourDots"><span></span><span></span><span></span><span></span><span></span><span></span></div><button type="button" class="tour-btn" id="tourBtn">Entiendo, continuar</button></div></div>
+        </section>
+
+        <section id="info-faqs" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Preguntas frecuentes</h2>
+                    <p>Respuestas a las dudas más comunes.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card" id="contenido-faqs">
+                <div class="info-vacio">
+                    <div>📝</div>
+                    <p>Aquí irán las preguntas frecuentes.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="info-soporte" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>¿La app no te funciona bien?</h2>
+                    <p>Te ayudamos a resolverlo.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card" id="contenido-soporte">
+                <div class="info-vacio">
+                    <div>📝</div>
+                    <p>Aquí irá la información de soporte técnico.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="info-diagnostico" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Datos de uso y diagnóstico</h2>
+                    <p>Qué información usa la app para funcionar.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card info-legal" id="contenido-diagnostico">
+                <p><em>Última actualización: 13 de octubre de 2026</em></p>
+
+                <h3>1. ¿Qué información usa la app para funcionar?</h3>
+                <p>Para que Ciudad Limpia funcione correctamente y de forma segura, la aplicación utiliza los siguientes datos:</p>
+                <ul>
+                    <li><strong>Información del dispositivo y de la app:</strong> modelo, sistema operativo, navegador, versión de la aplicación e idioma.</li>
+                    <li><strong>Datos de diagnóstico:</strong> errores, fallos y tiempos de respuesta que nos ayudan a detectar y corregir problemas.</li>
+                    <li><strong>Datos de conexión:</strong> dirección IP y fecha y hora de las solicitudes, registradas por los servicios de infraestructura que usa la plataforma.</li>
+                    <li><strong>Ubicación GPS:</strong> se solicita para centrar el mapa y para fijar la ubicación de tus reportes. No hay rastreo en segundo plano.</li>
+                    <li><strong>Cámara y galería:</strong> solo se accede cuando decides adjuntar una foto a un reporte. La imagen se reduce de tamaño en tu dispositivo antes de enviarse.</li>
+                    <li><strong>Notificaciones:</strong> si las autorizas, te avisamos sobre respuestas a tus reportes y avisos institucionales.</li>
+                    <li><strong>Datos almacenados en tu dispositivo:</strong> información de tu sesión y el registro de que aceptaste las políticas, para no pedírtelo cada vez.</li>
+                </ul>
+
+                <h3>2. ¿Para qué se usan estos datos?</h3>
+                <ul>
+                    <li>Hacer funcionar la aplicación y mantener tu sesión.</li>
+                    <li>Detectar y corregir errores y mejorar el rendimiento y la estabilidad.</li>
+                    <li>Proteger la plataforma frente a fraudes, abusos o accesos no autorizados.</li>
+                    <li>Elaborar estadísticas generales y anónimas sobre el uso del servicio.</li>
+                </ul>
+                <p>No vendemos esta información ni la usamos para publicidad de terceros.</p>
+
+                <h3>3. Cómo controlar tus permisos</h3>
+                <p>Puedes activar o desactivar en cualquier momento los permisos de ubicación, cámara, almacenamiento y notificaciones desde los ajustes de tu dispositivo o navegador. Si niegas la ubicación, podrás seguir usando la app y elegir el punto manualmente en el mapa. Al cerrar sesión se elimina la información de sesión guardada en tu dispositivo.</p>
+
+                <h3>4. Tus derechos</h3>
+                <p>Los datos personales tratados a través de la aplicación están protegidos por la Ley 1581 de 2012. Puedes conocer, actualizar, rectificar o solicitar la supresión de tus datos, y presentar quejas ante la Superintendencia de Industria y Comercio. Consulta los detalles y el procedimiento en la Política de Privacidad, disponible en el menú "Legal".</p>
+            </div>
+        </section>
+
+        <section id="info-privacidad" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Política de privacidad</h2>
+                    <p>Cómo cuidamos tus datos.</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card info-legal" id="contenido-privacidad"><div class="legal-meta"><p>Versión: 2.1.0 · Vigente desde el 1 de noviembre de 2026 · Responsable: Territorio Cívico S.A.S.</p></div><h2 class="legal-h2">PARTE II: POLÍTICA INTEGRAL DE PRIVACIDAD Y TRATAMIENTO DE DATOS PERSONALES</h2><h3>1. Marco Legal y Responsable</h3><p>En cumplimiento de la Ley Estatutaria 1581 de 2012, el Decreto 1377 de 2013 y las reglamentaciones vigentes en Colombia, los datos personales recolectados serán tratados por Territorio Cívico S.A.S., sociedad identificada con el correo territoriocivicosas@gmail.com y domicilio en Bucaramanga, Santander.</p><h3>2. Datos Personales Objeto de Tratamiento</h3><ul><li><strong>Datos de Identificación y Contacto:</strong> Nombre completo, correo electrónico, municipio, barrio de residencia e identificación del dispositivo móvil (Token FCM).</li><li><strong>Datos de Operación y Uso:</strong> Reportes cívicos creados, ubicación geográfica por coordenadas GPS enviadas voluntariamente al crear solicitudes, fotografías de evidencia adjuntadas, historial de EcoPuntos, canjes y conversaciones en chats de soporte dentro de la app.</li><li><strong>Menores de Edad:</strong> Datos del representante legal (correo y nombres) para validar el consentimiento paternofilial.</li></ul><h3>3. Finalidades del Tratamiento</h3><p>Los datos personales serán utilizados para:</p><ol><li>Gestionar el registro, autenticación e inicio de sesión de las cuentas de usuario.</li><li>Asignar y gestionar las solicitudes de recolección de reciclaje con los recicladores y organizaciones autorizadas en CicloGo.</li><li>Calcular, abonar, validar, vencer o anular EcoPuntos conforme al reglamento del programa.</li><li>Validar los canjes presenciales en Comercios Aliados.</li><li>Procesar y canalizar reportes urbanos ante entidades públicas o dependencias competentes.</li><li>Prevenir fraude, duplicidad de cuentas e intromisiones de software automatizado.</li><li>Enviar notificaciones Push en el dispositivo sobre estado de solicitudes, vencimiento de puntos y alertas operativas.</li></ol><h3>4. Transmisión y Transferencia de Datos</h3><ul><li><strong>Terceros Aliados Operativos:</strong> Para la prestación del servicio, se comparten únicamente los datos estrictamente necesarios:<ul><li><strong>Al Reciclador Verificado:</strong> Nombre del ciudadano, dirección o ubicación de recolección, teléfono/chat de contacto y fotografías de los residuos.</li><li><strong>Al Comercio Aliado:</strong> Nombre del ciudadano y detalle de la oferta canjeada (sin revelar historial financiero ni saldo total de puntos).</li></ul></li><li><strong>Proveedores Tecnológicos (Encargados del Tratamiento):</strong> La infraestructura utiliza servicios de Supabase (Base de datos y autenticación) y Google Firebase Cloud Messaging (Notificaciones Push), los cuales cuentan con altos estándares internacionales de seguridad e infraestructura en la nube. No se venden ni comercializan datos personales a terceros.</li></ul><h3>5. Derechos de los Titulares (Derechos ARCO)</h3><p>El usuario, como titular de sus datos personales, tiene derecho a:</p><ul><li>Conocer, actualizar y rectificar sus datos personales frente a Territorio Cívico S.A.S.</li><li>Solicitar prueba de la autorización otorgada.</li><li>Ser informado del uso que se le ha dado a sus datos personales.</li><li>Presentar quejas ante la Superintendencia de Industria y Comercio (SIC) por infracciones a la ley.</li><li>Revocar la autorización o solicitar la supresión de sus datos cuando no exista un deber legal o contractual de permanecer en la base de datos.</li></ul><p>Para ejercer cualquiera de estos derechos, el usuario deberá enviar una comunicación al correo electrónico territoriocivicosas@gmail.com. Las solicitudes de consulta se responderán en un plazo máximo de diez (10) días hábiles y los reclamos o solicitudes de supresión en quince (15) días hábiles.</p><h3>6. Retención y Destrucción de Datos</h3><p>Las fotografías adjuntas en reportes resueltos o cancelados son eliminadas de los servidores de almacenamiento en un plazo máximo de treinta (30) días calendario, conservando únicamente los registros numéricos e informativos de la transacción. Los datos de la cuenta se mantendrán mientras permanezca activa o durante el plazo exigido por las normas fiscales y de auditoría de Colombia.</p><h3>7. Ley Aplicable y Jurisdicción</h3><p>Los presentes Términos y la Política de Privacidad se rigen íntegramente por las leyes de la República de Colombia. Cualquier controversia será sometida a los jueces ordinarios de la República de Colombia con sede en la ciudad de Bucaramanga.</p></div>
+        </section>
+
+        <section id="info-terminos" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Términos y condiciones</h2>
+                    <p>EcoSTAN · Versión 2.1.0</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card info-legal" id="contenido-terminos"><div class="legal-meta"><p>Versión: 2.1.0 (Actualizada)</p><p>Fecha de Entrada en Vigor: 1 de noviembre de 2026</p><p>Entidad Gestora: Territorio Cívico S.A.S.</p><p>NIT: [Insertar NIT]</p><p>Domicilio Social: Bucaramanga, Santander, Colombia</p><p>Correo Electrónico Oficial / Canal PQR: territoriocivicosas@gmail.com</p><p>Área Metropolitana de Cobertura: Bucaramanga, Floridablanca, Girón y Piedecuesta.</p></div><h2 class="legal-h2">PARTE I: TÉRMINOS Y CONDICIONES DE USO (CIUDADANÍA)</h2><h3>1. Aceptación y Objeto</h3><p>Al descargar, registrarse, acceder o utilizar la aplicación móvil EcoSTAN (en adelante, la "Plataforma"), el usuario (persona natural o jurídica) acepta de forma plena, expresa, libre e informada los presentes Términos y Condiciones, así como la Política de Privacidad integrada. Si el usuario no está de acuerdo con las condiciones aquí dispuestas, deberá abstenerse de utilizar la Plataforma.</p><p>EcoSTAN es un canal tecnológico de participación cívica, cultura ciudadana, educación ambiental e incentivos por separación en la fuente que conecta a la ciudadanía con rutas de recolección, organizaciones de recicladores de oficio, comercios aliados e iniciativas ambientales.</p><h3>2. Definiciones</h3><ul><li><strong>EcoSTAN:</strong> Aplicación móvil orientada al ciudadano para reportes urbanos, educación ambiental y programa de incentivos (EcoPuntos).</li><li><strong>CicloGo:</strong> Plataforma tecnológica complementaria de administración y logística para recicladores de oficio, Estaciones de Clasificación y Aprovechamiento (ECA), comercios aliados y gestores ambientales.</li><li><strong>EcoPunto:</strong> Unidad digital no monetaria de reconocimiento cívico e incentivo ambiental otorgada por la correcta separación en la fuente y la participación activa.</li><li><strong>Reciclador Verificado:</strong> Reciclador de oficio inscrito formalmente o perteneciente a una Organización de Recicladores de Oficio (ARO) en el marco del Decreto 596 de 2016, registrado y habilitado en CicloGo.</li><li><strong>Comercio Aliado:</strong> Establecimiento comercial que de forma voluntaria ofrece beneficios o descuentos a los usuarios a cambio de la redención de EcoPuntos.</li><li><strong>Recogida Completada:</strong> Solicitud de reciclaje que ha cumplido satisfactoriamente con la verificación de carnet QR del reciclador, la entrega del material y el registro de pesaje validado por la báscula de una ECA o centro de acopio autorizado dentro del plazo operativo.</li></ul><h3>3. Cuenta de Usuario, Registro y Menores de Edad</h3><ol><li><strong>Requisitos de Registro:</strong> Para acceder a las funciones de reporte, acumulación y canje de EcoPuntos, el usuario debe registrarse proporcionando nombre completo y un correo electrónico válido.</li><li><strong>Una Cuenta por Persona:</strong> Cada usuario podrá titularizar una única cuenta personal. La creación de cuentas múltiples o ficticias con el propósito de manipular el sistema de EcoPuntos dará lugar al bloqueo definitivo de la cuenta.</li><li><strong>Protección a Menores de Edad:</strong> El uso de EcoSTAN por parte de menores de 18 años está condicionado a la previa representación y autorización expresa de su padre, madre o tutor legal. El proceso de registro validará la autorización mediante la casilla de verificación legal e ingreso del correo electrónico del representante legal, quien asumirá la responsabilidad de la supervisión del menor conforme a la Ley 1581 de 2012 y el Código de la Infancia y la Adolescencia.</li></ol><h3>4. Normas de Uso y Prohibiciones</h3><p>El usuario se compromete a hacer un uso diligente, ético y conforme a la ley de la Plataforma. Queda estrictamente prohibido:</p><ul><li>Enviar reportes falsos, malintencionados, injuriosos o que incluyan imágenes no relacionadas con el objeto de la solicitud.</li><li>Entregar material contaminado, húmedo, mezclado con residuos peligrosos (biológicos, químicos, hospitalarios) o alterar voluntariamente el peso de los materiales.</li><li>Incurrir en conductas de colusión con recicladores, comercios o terceros para simular entregas, pesajes o canjes de EcoPuntos.</li><li>Comercializar, transferir, vender o intercambiar EcoPuntos o códigos QR por dinero en efectivo.</li><li>Usar emuladores, scripts, bots o herramientas de automatización para alterar el funcionamiento de la Plataforma o responder trivias.</li></ul><h3>5. Régimen y Funcionamiento de los EcoPuntos</h3><h4>5.1. Naturaleza Jurídica</h4><p>Los EcoPuntos son incentivos digitales de naturaleza estrictamente promocional y cívica. No constituyen dinero electrónico, moneda de curso legal, divisa, títulos valores ni instrumentos financieros de pago. No generan intereses, no son reembolsables en dinero bajo ninguna circunstancia y no otorgan derechos de propiedad monetaria. El valor de $10 COP por EcoPunto opera únicamente como una referencia indicativa para el cálculo de beneficios comercializados por Comercios Aliados.</p><h4>5.2. Tablas de Acumulación</h4><div class="legal-tabla-wrap"><table class="legal-tabla"><thead><tr><th>Actividad / Material</th><th>Tarifa de EcoPuntos</th></tr></thead><tbody>
+<tr><td>Reciclaje de PET</td><td>12 EcoPuntos por kilo</td></tr>
+<tr><td>Aparatos Eléctricos/Electrónicos (RAEE) y Cables</td><td>15 EcoPuntos por kilo</td></tr>
+<tr><td>Chatarra / Metal y Plásticos (Otros)</td><td>8 EcoPuntos por kilo</td></tr>
+<tr><td>Cartón, Papel y Textil</td><td>6 EcoPuntos por kilo</td></tr>
+<tr><td>Vidrio y Otros Aprovechables</td><td>5 EcoPuntos por kilo</td></tr>
+<tr><td>Anticipo por Verificación de Carnet (QR)</td><td>50 EcoPuntos por solicitud (acreditable al instante)</td></tr>
+<tr><td>Trivia Diaria Correcta</td><td>20 EcoPuntos</td></tr>
+<tr><td>Módulos Eco-Academia</td><td>Según bonificación de cada módulo</td></tr></tbody></table></div><h4>5.3. Reglas de Pesaje, Anticipo y Ajustes</h4><ul><li><strong>Anticipo y Ajuste:</strong> Al escanear el carnet QR del reciclador en la entrega, el usuario recibe un anticipo inmediato de 50 EcoPuntos. Una vez el material es ingresado y pesado en la ECA, se calcula el total de puntos ganados según el peso real y la calidad del material. Los 50 puntos del anticipo son descontados del resultado final de la recogida.</li><li><strong>Inconsistencias y Calidad:</strong> Si el material entregado es rechazado o declarado contaminado por la ECA, o el total real es inferior al anticipo otorgado, no se imputarán saldos negativos obligatorios en dinero al usuario. La diferencia se conciliará sobre el saldo disponible de EcoPuntos promocionales o mediante la auditoría del caso.</li><li><strong>Plazo Máximo de Pesaje:</strong> El plazo para que la ECA o el reciclador confirmen el pesaje en sistema es de 72 horas continuas desde el escaneo del QR. Si transcurrido dicho plazo no se reporta pesaje por causas imputables a la logística, el anticipo de 50 EcoPuntos podrá revocarse preventivamente notificando al usuario.</li></ul><h4>5.4. Vigencia y Regla del Mes</h4><ul><li><strong>Vigencia:</strong> Cada EcoPunto acreditado tiene una vigencia de 90 días calendario. Cumplido dicho plazo sin ser canjeado, caducará automáticamente. La Plataforma enviará alertas preventivas a través de notificaciones en la app.</li><li><strong>Regla de Canje Mensual:</strong> Para que un usuario pueda canjear EcoPuntos en Comercios Aliados durante un mes calendario determinado, deberá contar con al menos una (1) Recogida Completada en dicho mes (o tener activo el beneficio por recogida previa dentro de los últimos 30 días).</li></ul><h4>5.5. Topes de Acumulación</h4><ul><li><strong>Tope Mensual:</strong> Máximo 600 EcoPuntos acumulables por mes calendario por cuenta residencial.</li><li><strong>Límite Diario por Entrega:</strong> Máximo 15 kg de material por día para entregas ordinarias.</li><li><strong>Tope por Solicitud:</strong> Máximo 300 EcoPuntos por recolección individual.</li></ul><h3>6. Redención en Comercios Aliados</h3><ol><li>Los Comercios Aliados participan voluntariamente en el programa. EcoSTAN actúa como canal de visibilidad publicitaria y no garantiza la disponibilidad continua ni la calidad de los productos o servicios ofrecidos por dichos establecimientos.</li><li>Las reclamaciones por efectividad de garantías, idoneidad o calidad de los bienes/servicios adquiridos con beneficios de EcoPuntos deberán dirigirse directamente ante el Comercio Aliado respectivo, conforme a la Ley 1480 de 2011.</li><li>El código QR de canje generado por el usuario en caja tiene una validez temporal de 60 segundos. Una vez finalizado el tiempo o escaneado el código, este caducará.</li></ol><h3>7. Procedimiento de Peticiones, Quejas, Reclamos y Debido Proceso (PQR)</h3><h4>7.1. Trámite de PQR (Ley 1480 de 2011)</h4><p>Cualquier petición, queja, reclamo o inconformidad sobre la Plataforma o el saldo de EcoPuntos podrá presentarse al correo territoriocivicosas@gmail.com.</p><ul><li><strong>Tiempo de Respuesta:</strong> Las PQR serán atendidas dentro de los quince (15) días hábiles siguientes a su recepción.</li></ul><h4>7.2. Procedimiento Sancionatorio y Descargos</h4><p>Si se detectan indicios de fraude, inconsistencias graves en las fotografías de reportes o incumplimiento de estos Términos:</p><ol><li><strong>Medida Preventiva:</strong> Se suspenderá temporalmente la cuenta del usuario notificando la causa por correo electrónico.</li><li><strong>Derecho de Descargos:</strong> El usuario dispondrá de un término de cinco (5) días hábiles para enviar explicaciones y pruebas al correo oficial.</li><li><strong>Decisión:</strong> Territorio Cívico S.A.S. evaluará las pruebas presentadas y resolverá en un plazo máximo de diez (10) días hábiles. Si se confirma la infracción, se cancelará la cuenta y se cancelarán los EcoPuntos generados irregularmente.</li></ol><p class="legal-aviso">La Política de Privacidad (Parte II) está disponible en el menú "Legal".</p></div>
+        </section>
+
+
+        <section id="info-terminos-ciclogo" class="seccion">
+            <div class="section-title">
+                <div>
+                    <h2>Términos de CicloGo</h2>
+                    <p>Recicladores, ECA y comercios aliados · Versión 2.1.0</p>
+                </div>
+                <button class="secondary-btn" onclick="volverAtras('inicio')">← Volver</button>
+            </div>
+            <div class="info-card info-legal" id="contenido-terminos-ciclogo"><div class="legal-meta"><p>Versión: 2.1.0 (Actualizada para Producción)</p><p>Fecha de Última Actualización: 1 de noviembre de 2026</p><p>Entidad Gestora: Territorio Cívico S.A.S.</p><p>Correo Electrónico de Contacto y Soporte: territoriocivicosas@gmail.com</p><p>Área de Cobertura: Bucaramanga, Floridablanca, Girón, Piedecuesta y Área Metropolitana.</p></div><h2 class="legal-h2">MÓDULO I: TÉRMINOS Y CONDICIONES DEL RECICLADOR DE OFICIO Y ORGANIZACIÓN DE APROVECHAMIENTO (ECA)</h2><h3>1. Aceptación y Objeto</h3><p>Al registrarte, verificar tu cuenta y usar CicloGo, aceptas expresamente estos Términos y Condiciones, así como la Política de Privacidad Integrada de Territorio Cívico S.A.S.</p><p>CicloGo es una herramienta tecnológica de logística, gestión de rutas y registro de pesaje en báscula que conecta solicitudes de material reciclable originadas en la aplicación EcoSTAN con recicladores de oficio verificados y Estaciones de Clasificación y Aprovechamiento (ECA), en el marco de la economía circular y la normatividad ambiental aplicable (Decreto 1077 de 2015, Decreto 596 de 2016 y Ley 142 de 1994).</p><h3>2. Autonomía e Independencia Operativa (Ausencia de Relación Laboral)</h3><ol><li><strong>Persona Autónoma:</strong> El reciclador de oficio actúa como una persona independiente o como miembro formal de una Asociación / Organización de Recicladores de Oficio (ARO).</li><li><strong>Sin Subordinación:</strong> Estos términos no crean relación laboral, contrato de trabajo, representación, agencia ni sociedad de hecho entre el reciclador de oficio y Territorio Cívico S.A.S., empresas de recolección, comercios aliados o ciudadanos.</li><li><strong>Libertad Operativa:</strong> El reciclador decide libremente cuándo conectarse, en qué horario ponerse en estado "En línea", qué solicitudes aceptar y cómo organizar su itinerario o ruta.</li><li><strong>Ausencia de Salario:</strong> La plataforma no paga salarios, honorarios fijos ni tarifas por recolección al reciclador. Los ingresos del reciclador provienen exclusivamente de la comercialización del material reciclable en la ECA o centro de acopio conforme a las reglas del mercado o el esquema del servicio público domiciliario de aseo (Decreto 596 de 2016).</li></ol><h3>3. Registro, Verificación y Seguridad</h3><ol><li><strong>Verificación Obligatoria:</strong> Para operar en la plataforma, el reciclador debe completar su registro con datos verídicos y ser habilitado formalmente por la administración o por su respectiva organización ambiental/ECA.</li><li><strong>Cuenta y Carnet QR Intransferibles:</strong> El acceso a la cuenta y el carnet QR de identificación son personales e intransferibles. Está prohibido ceder, prestar, alquilar o compartir la cuenta o el carnet QR con terceros.</li><li><strong>Seguridad y Cumplimiento:</strong> El reciclador es responsable único de su seguridad personal, del estado mecánico de su vehículo o medio de transporte, del uso de Elementos de Protección Personal (EPP) y del cumplimiento de las normas de tránsito y ambientales de Colombia. Territorio Cívico S.A.S. no responde por accidentes, daños, contingencias u omisiones durante las rutas o traslados.</li></ol><h3>4. Estado "En Línea", Solicitudes y Flujo Operativo</h3><ol><li><strong>Alertas por Ubicación:</strong> Al estar "En línea", la plataforma utiliza la geolocalización GPS del dispositivo únicamente para notificar solicitudes cercanas de entrega de reciclaje.</li><li><strong>Compromiso de Atención:</strong> Al tomar una solicitud, el reciclador asume el compromiso de atenderla oportunamente. Si surge un imprevisto, deberá cancelarla en el sistema para que otro reciclador pueda tomarla y notificar al ciudadano vía chat.</li><li>Paso a Paso del Proceso:<ul><li><strong>Llegada y Carnet:</strong> Al presentarse en la dirección, el reciclador exhibe su carnet QR desde la app CicloGo. El ciudadano lo escanea desde EcoSTAN para validar la autenticidad y habilitar la entrega.</li><li><strong>Recepción y Filtro:</strong> El reciclador verifica la calidad y tipo de material. Está prohibido recibir residuos peligrosos, biológicos, hospitalarios, inflamables o escombros.</li><li><strong>Traslado a ECA:</strong> El reciclador lleva el material a la ECA habilitada. Puede agrupar entregas de su ruta en un lote logístico.</li><li><strong>Pesaje en Báscula:</strong> La ECA pesa el lote o entrega individual en báscula, registra el material y su nivel de calidad en CicloGo. El algoritmo de la plataforma distribuye equitativamente el peso y genera los EcoPuntos definitivos para los usuarios.</li><li><strong>Cierre de Recogida:</strong> Confirmado el pesaje por la ECA, la recolección pasa a estado completada.</li></ul></li></ol><h3>5. Ventana Operativa de Pesaje de 72 Horas</h3><ol><li><strong>Plazo Continuo:</strong> El material recolectado debe ser reportado y pesado en la báscula de la ECA dentro de las 72 horas continuas siguientes al momento del escaneo del carnet QR.</li><li><strong>Alertas Operativas:</strong> El sistema notificará preventivamente al reciclador para evitar el vencimiento de la recogida.</li><li><strong>Vencimiento de Término:</strong> Si se cumplen las 72 horas sin registro de pesaje en báscula por parte de la ECA:<ul><li>El anticipo otorgado al ciudadano es objeto de revisión/anulación en el sistema.</li><li>La recogida queda en estado extemporáneo y se genera un registro de auditoría longitudinal sobre la ruta.</li></ul></li><li><strong>Fuerza Mayor:</strong> La administración podrá extender el plazo mediante soporte escrito o digital únicamente ante hechos de caso fortuito o fuerza mayor (ej. fallas operativas demostradas en la ECA).</li></ol><h3>6. Prohibiciones y Régimen Sancionatorio</h3><p>Constituyen conductas estrictamente prohibidas:</p><ul><li>Simular entregas, pesajes o acordar recolecciones falsas con ciudadanos, personal de la ECA o terceros (colusión).</li><li>Alterar el peso de los materiales agregando agua, arena o elementos ajenos.</li><li>Exigir o cobrar tarifas o dinero en efectivo a los ciudadanos por la recolección ordinaria de materiales solicitados vía app.</li><li>Prestar el carnet QR o la cuenta de acceso.</li><li>Tratar de forma irrespetuosa a ciudadanos, otros recicladores o personal de la ECA.</li></ul><p>Procedimiento de Descargos: Ante una presunta infracción, la cuenta será suspendida preventivamente. El reciclador dispondrá de cinco (5) días hábiles para enviar explicaciones y evidencias a territoriocivicosas@gmail.com. La administración resolverá la situación dentro de los diez (10) días hábiles siguientes.</p><h2 class="legal-h2">MÓDULO II: TÉRMINOS Y CONDICIONES DEL COMERCIO ALIADO</h2><h3>1. Participación Voluntaria y Naturaleza Comercial</h3><ol><li><strong>Fidelización y Visibilidad:</strong> El Comercio Aliado se inscribe voluntariamente en CicloGo para publicar beneficios comerciales y atraer usuarios conscientes del programa EcoSTAN.</li><li><strong>Sin Contraprestación Monetaria:</strong> Territorio Cívico S.A.S. no cobra cuotas de ingreso básico ni paga compensaciones dinerarias al comercio por los beneficios otorgados. Las promociones son asumidas por el comercio como parte de su estrategia de mercadeo y fidelización.</li></ol><h3>2. Ofertas y Condiciones</h3><ol><li><strong>Gestión de Ofertas:</strong> Cada comercio podrá mantener hasta tres (3) ofertas activas simultáneamente en el panel de CicloGo.</li><li><strong>Estructura Requerida:</strong> Cada oferta debe indicar de forma clara y transparente:<ul><li>Detalle preciso del beneficio o descuento otorgado.</li><li>Valor en EcoPuntos requeridos para la redención (mínimo 10 EcoPuntos).</li><li>Monto en pesos ($ COP) de la compra mínima requerida para hacer efectivo el beneficio.</li></ul></li><li><strong>Equivalencia de Referencia:</strong> Se establece como referencia informativa que 1 EcoPunto equivale a $10 COP en la valoración publicitaria del beneficio.</li><li><strong>Obligatoriedad:</strong> Toda oferta confirmada mediante la lectura de código QR en la caja del establecimiento debe ser honrada en las condiciones exactas publicadas.</li></ol><h3>3. Procedimiento de Canje en Caja</h3><ol><li><strong>Generación de QR Dinámico:</strong> El cliente genera en EcoSTAN un código QR con vigencia de 60 segundos.</li><li><strong>Escaneo y Confirmación:</strong> El cajero o personal del comercio escanea el QR desde CicloGo. A partir del escaneo, cuenta con un plazo de cinco (5) minutos para ingresar el valor real de la compra efectuada y confirmar la transacción.</li><li><strong>Descuento de Puntos:</strong> Al confirmar el canje en CicloGo, el sistema valida la regla de la recogida mensual del usuario, su saldo vigente y efectúa el descuento automático de EcoPuntos.</li><li><strong>Capturas No Válidas:</strong> No se aceptan capturas de pantalla, imágenes impresas o códigos QR vencidos.</li></ol><h3>4. Responsabilidad del Comercio y Aspectos Tributarios</h3><ol><li><strong>Estatuto del Consumidor (Ley 1480 de 2011):</strong> El Comercio Aliado es el único responsable por la calidad, idoneidad, seguridad y garantía de los productos o servicios ofrecidos.</li><li><strong>Facturación Electrónica (DIAN):</strong> El Comercio Aliado deberá cumplir con sus obligaciones tributarias en Colombia. Los descuentos comerciales otorgados mediante la redención de EcoPuntos deben ser registrados en la factura electrónica o tiquete de venta conforme a las disposiciones fiscales vigentes (descuentos comerciales condicionados).</li></ol><h2 class="legal-h2">MÓDULO III: ACUERDO DE TRANSMISIÓN Y PROTECCIÓN DE DATOS PERSONALES (DPA)</h2><h3>1. Roles en el Tratamiento de Datos (Ley 1581 de 2012)</h3><ul><li><strong>Responsable del Tratamiento:</strong> Territorio Cívico S.A.S., identificado con el correo electrónico territoriocivicosas@gmail.com.</li><li><strong>Encargados del Tratamiento:</strong> Los Recicladores de Oficio, las Estaciones de Clasificación y Aprovechamiento (ECA) y los Comercios Aliados actúan en calidad de Encargados del Tratamiento respecto de la información personal a la que acceden desde la plataforma CicloGo.</li></ul><h3>2. Obligaciones del Comercio Aliado, ECA y Reciclador sobre Datos</h3><p>Al acceder a datos de ciudadanos (nombres, direcciones de entrega, fotografías, chats de soporte o detalles de canje), se comprometen a:</p><ol><li><strong>Finalidad Exclusiva:</strong> Tratar los datos personales únicamente para la ejecución directa de la recogida o del canje en caja.</li><li><strong>Prohibición de Uso Comercial:</strong> Queda prohibido recolectar, almacenar, comercializar, ceder o utilizar los datos de los usuarios para el envío de spam, publicidad no autorizada o prospección de ventas ajena al sistema.</li><li><strong>Confidencialidad:</strong> Mantener la estricta reserva de la información e implementar medidas de seguridad técnicas para evitar su filtración o pérdida.</li><li><strong>Supresión:</strong> Eliminar o abstenerse de conservar datos personales finalizada la transacción o servicio logístico.</li></ol><h2 class="legal-h2">MÓDULO IV: LEY APLICABLE Y CANALES DE CONTACTO</h2><ol><li><strong>Legislación:</strong> Estos Términos y Condiciones se rigen por las leyes de la República de Colombia.</li><li><strong>Atención de Consultas y Reclamos:</strong> Cualquier solicitud, soporte técnico, aclaración de pesajes o descargos contractuales se atenderá formalmente a través de:<ul><li><strong>Correo Electrónico Oficial:</strong> territoriocivicosas@gmail.com</li><li><strong>Plazo de Respuesta a Consultas:</strong> Diez (10) días hábiles.</li><li><strong>Plazo de Respuesta a Reclamos / PQR:</strong> Quince (15) días hábiles.</li></ul></li></ol></div>
+        </section>
+
+        <!-- Aviso de Copyright Institucional -->
+        <footer style="text-align: center; font-size: 11px; color: #888; margin-top: auto; padding: 25px 10px 10px; line-height: 1.4;">
+            © 2026 EcoStan - Territorio Cívico S.A.S. Todos los derechos reservados.
+        </footer>
+
+    </main>
+
+    <!-- Paneles superpuestos de los módulos (escáner QR, etc.) -->
+    <div data-slot="overlays" data-slot-multiple></div>
+
+    <!-- NOTIFICACIÓN (TOAST) -->
+    <div id="toast" class="toast">
+        <strong>Notificación</strong>
+        <p>Acción realizada correctamente.</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="banners-config.js"></script>
+    <script type="module" src="app.js"></script>
+
+
+    <script>
+    (function(){
+        function iniciarTour(){
+            var track=document.getElementById('tourTrack'); if(!track||track.dataset.listo) return; track.dataset.listo='1';
+            var dots=document.querySelectorAll('#tourDots span'), btn=document.getElementById('tourBtn'), n=dots.length, actual=0;
+            function pinta(){ dots.forEach(function(d,i){d.classList.toggle('on',i===actual)}); btn.textContent = actual===n-1 ? '¡COMENZAR A USAR ECOSTAN!' : 'Entiendo, continuar'; }
+            function ir(i){ actual=Math.max(0,Math.min(n-1,i)); track.scrollTo({left:track.clientWidth*actual,behavior:'smooth'}); pinta(); }
+            track.addEventListener('scroll',function(){ var i=Math.round(track.scrollLeft/track.clientWidth); if(i!==actual){actual=i;pinta();} },{passive:true});
+            btn.addEventListener('click',function(){
+                if(actual<n-1){ ir(actual+1); }
+                else { try{localStorage.setItem('tourVisto','1')}catch(e){} if(typeof volverAtras==='function') volverAtras('inicio'); else location.hash=''; setTimeout(function(){track.scrollTo({left:0});actual=0;pinta();},400); }
+            });
+            window.addEventListener('resize',function(){ track.scrollTo({left:track.clientWidth*actual}); });
+            if('IntersectionObserver' in window){ new IntersectionObserver(function(e){ if(e[0].isIntersecting){ track.scrollLeft=0; actual=0; pinta(); } }).observe(track); }
+            pinta();
+        }
+        if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',iniciarTour); else iniciarTour();
+    })();
+    </script>
+</body>
+</html>
